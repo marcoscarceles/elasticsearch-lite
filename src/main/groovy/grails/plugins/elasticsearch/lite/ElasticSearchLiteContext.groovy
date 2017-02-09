@@ -1,8 +1,11 @@
-package grails.plugins.elasticsearch.lite.mapping
+package grails.plugins.elasticsearch.lite
 
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.core.GrailsDomainClass
+import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
+import grails.plugins.elasticsearch.lite.mapping.Mapping
+import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.transform.CompileStatic
 import org.grails.core.artefact.DomainClassArtefactHandler
 
@@ -49,7 +52,12 @@ class ElasticSearchLiteContext {
         ELASTIC_TYPES
     }
 
-    String getType(Class clazz) {
+    ElasticSearchType getType(Class clazz) {
         ELASTIC_TYPES[clazz]
     }
+
+    public <T> ElasticSearchMarshaller<T> getMarshaller(Class<T> clazz) {
+        MARSHALLERS[clazz] as ElasticSearchMarshaller<T>
+    }
+
 }

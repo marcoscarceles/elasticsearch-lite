@@ -1,8 +1,7 @@
-package grails.plugins.elasticsearch.lite.mapping
+package grails.plugins.elasticsearch.lite
 
+import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.util.IndexNamingUtils
-
-import javax.persistence.Index
 
 /**
  * Created by marcoscarceles on 08/02/2017.

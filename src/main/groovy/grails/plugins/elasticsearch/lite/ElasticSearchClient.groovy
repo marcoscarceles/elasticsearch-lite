@@ -1,8 +1,7 @@
-package grails.plugins.elasticsearch.lite.mapping
+package grails.plugins.elasticsearch.lite
 
 import grails.core.GrailsApplication
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
-import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.elasticsearch.client.Client
 import org.elasticsearch.client.transport.TransportClient
@@ -15,7 +14,7 @@ import org.grails.io.support.Resource
  * Created by marcoscarceles on 08/02/2017.
  */
 @Slf4j
-class ElasticSearchClient implements ElasticSearchConfigAware {
+final class ElasticSearchClient implements ElasticSearchConfigAware {
 
     GrailsApplication grailsApplication
     private TransportClient client

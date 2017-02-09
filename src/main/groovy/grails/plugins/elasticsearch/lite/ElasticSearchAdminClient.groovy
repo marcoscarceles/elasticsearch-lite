@@ -1,4 +1,4 @@
-package grails.plugins.elasticsearch.lite.mapping
+package grails.plugins.elasticsearch.lite
 
 import groovy.util.logging.Slf4j
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest
@@ -17,17 +17,18 @@ import java.util.regex.Matcher
  * Created by marcoscarceles on 08/02/2017.
  */
 @Slf4j
-class ElasticSearchAdminClient extends ElasticSearchClient {
+class ElasticSearchAdminClient {
 
     static transactional = false
 
     private static final WAIT_FOR_INDEX_MAX_RETRIES = 10
     private static final WAIT_FOR_INDEX_SLEEP_INTERVAL = 100
 
-    ElasticSearchLiteContext elasticSearchLiteMapper
+    ElasticSearchLiteContext elasticSearchLiteContext
+    ElasticSearchClient elasticSearchClient
 
     private AdminClient getAdminClient() {
-        getClient().admin()
+        elasticSearchClient.getClient().admin()
     }
 
     /**
@@ -63,7 +64,7 @@ class ElasticSearchAdminClient extends ElasticSearchClient {
 
         // Retrieve indices to delete
         searchableClasses.each {
-            ElasticSearchType esType = elasticSearchLiteMapper.getType(it)
+            ElasticSearchType esType = elasticSearchLiteContext.getType(it)
             if (esType) {
                 toDelete << esType.index
             }

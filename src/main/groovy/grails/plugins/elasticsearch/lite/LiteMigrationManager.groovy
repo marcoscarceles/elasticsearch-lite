@@ -1,22 +1,13 @@
-package grails.plugins.elasticsearch.lite.mapping
+package grails.plugins.elasticsearch.lite
 
 import grails.core.GrailsApplication
-import grails.plugins.elasticsearch.exception.MappingException
-import grails.plugins.elasticsearch.mapping.MappingConflict
+import grails.plugins.elasticsearch.lite.ElasticSearchAdminClient
+import grails.plugins.elasticsearch.lite.ElasticSearchLiteContext
+import grails.plugins.elasticsearch.lite.ElasticSearchType
 import grails.plugins.elasticsearch.mapping.MappingMigrationStrategy
-import grails.plugins.elasticsearch.mapping.SearchableClassMapping
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
 import grails.plugins.elasticsearch.util.IndexNamingUtils
 import groovy.util.logging.Slf4j
-
-import javax.persistence.Index
-
-import static grails.plugins.elasticsearch.mapping.MappingMigrationStrategy.alias
-import static grails.plugins.elasticsearch.mapping.MappingMigrationStrategy.delete
-import static grails.plugins.elasticsearch.mapping.MappingMigrationStrategy.deleteIndex
-import static grails.plugins.elasticsearch.mapping.MappingMigrationStrategy.none
-import static grails.plugins.elasticsearch.util.IndexNamingUtils.indexingIndexFor
-import static grails.plugins.elasticsearch.util.IndexNamingUtils.queryingIndexFor
 
 /**
  * Created by marcoscarceles on 08/02/2017.
@@ -24,9 +15,9 @@ import static grails.plugins.elasticsearch.util.IndexNamingUtils.queryingIndexFo
 @Slf4j
 class LiteMigrationManager implements ElasticSearchConfigAware {
 
-    ElasticSearchAdminClient elasticSearchAdminClient
-    ElasticSearchLiteContext elasticSearchLiteContext
     GrailsApplication grailsApplication
+    ElasticSearchLiteContext elasticSearchLiteContext
+    ElasticSearchAdminClient elasticSearchAdminClient
 
     def applyMigrations(MappingMigrationStrategy migrationStrategy, Map<String, Map<Class<?>, ElasticSearchType>> indices, List<ElasticSearchType> mappingConflicts, Map indexSettings) {
         elasticSearchLiteContext.indexesRebuiltOnMigration = applyAliasStrategy(indices, mappingConflicts, indexSettings)

@@ -1,4 +1,4 @@
-package grails.plugins.elasticsearch.lite.mapping
+package grails.plugins.elasticsearch.lite
 
 import grails.core.GrailsApplication
 import grails.plugins.elasticsearch.mapping.MappingMigrationStrategy
@@ -18,8 +18,8 @@ import static grails.plugins.elasticsearch.mapping.MappingMigrationStrategy.none
 class ElasticSearchBootstrap implements ElasticSearchConfigAware {
 
     GrailsApplication grailsApplication
-    ElasticSearchAdminClient elasticSearchAdminClient
     ElasticSearchLiteContext elasticSearchLiteContext
+    ElasticSearchAdminClient elasticSearchAdminClient
     LiteMigrationManager liteMigrationManager
 
     void installMappings() {
@@ -52,7 +52,7 @@ class ElasticSearchBootstrap implements ElasticSearchConfigAware {
                             log.debug("\t\tMapping ["+ elasticSearchType.type +"] => " + elasticSearchType.marshaller.mapping.toPrettyString())
                         }
                     }
-                    createIndexWithMappings(indexName,  indexTypes.values(), indexSettings)
+                    createIndexWithMappings(indexName,  indexTypes.values() as List, indexSettings)
                 } catch (RemoteTransportException rte) {
                     log.debug(rte.getMessage())
                 }
