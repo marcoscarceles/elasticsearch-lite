@@ -17,6 +17,7 @@ import grails.plugins.Plugin
 import grails.plugins.elasticsearch.lite.ElasticSearchIndexBuilder
 import grails.plugins.elasticsearch.lite.ElasticSearchLiteContext
 import grails.plugins.elasticsearch.lite.LiteMigrationManager
+import grails.plugins.elasticsearch.util.DomainDynamicMethodsUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -36,18 +37,15 @@ class ElasticsearchGrailsPlugin extends Plugin {
 
     def license = 'APACHE'
 
-    def organization = [name: '10ne.org', url: 'http://www.10ne.org/']
+    def organization = [name: 'Marcos Carceles', url: 'http://www.marcoscarceles.com/']
 
     def developers = [
-            [name: 'Marcos Carceles', email: 'marcos.carceles@gmail.com'],
-            [name: 'Noam Y. Tenne', email: 'noam@10ne.org'],
-            [name: 'Puneet Behl', email: 'puneet.behl007@gmail.com'],
-            [name: 'James Kleeh', email: '	james.kleeh@gmail.com']
+            [name: 'Marcos Carceles', email: 'marcos.carceles@gmail.com']
     ]
 
-    def issueManagement = [system: 'github', url: 'https://github.com/noamt/elasticsearch-grails-plugin/issues']
+    def issueManagement = [system: 'github', url: 'https://github.com/marcoscarceles/elasticsearch-lite/issues']
 
-    def scm = [url: 'https://github.com/marcoscarceles/elasticsearch-grails-plugin']
+    def scm = [url: 'https://github.com/marcoscarceles/elasticsearch-lite']
 
     def author = 'Marcos Carceles'
     def authorEmail = 'me@marcoscarceles.com'
@@ -74,79 +72,13 @@ class ElasticsearchGrailsPlugin extends Plugin {
                 liteMigrationManager = ref('liteMigrationManager')
                 bean.initMethod = 'setupIndices'
             }
-
-//            elasticSearchContextHolder(ElasticSearchContextHolder) {
-//                config = esConfig
-//            }
-//            elasticSearchHelper(ElasticSearchHelper) {
-//                elasticSearchClient = ref('elasticSearchClient')
-//            }
-//            elasticSearchClient(ClientNodeFactoryBean) { bean ->
-//                elasticSearchContextHolder = ref('elasticSearchContextHolder')
-//                bean.destroyMethod = 'shutdown'
-//            }
-//            indexRequestQueue(IndexRequestQueue) {
-//                elasticSearchContextHolder = ref('elasticSearchContextHolder')
-//                elasticSearchClient = ref('elasticSearchClient')
-//                jsonDomainFactory = ref('jsonDomainFactory')
-//            }
-//            mappingMigrationManager(MappingMigrationManager) {
-//                elasticSearchContextHolder = ref('elasticSearchContextHolder')
-//                grailsApplication = grailsApplication
-//                es = ref('elasticSearchAdminService')
-//            }
-//            searchableClassMappingConfigurator(SearchableClassMappingConfigurator) { bean ->
-//                elasticSearchContext = ref('elasticSearchContextHolder')
-//                grailsApplication = grailsApplication
-//                es = ref('elasticSearchAdminService')
-//                mmm = ref('mappingMigrationManager')
-//
-//                bean.initMethod = 'configureAndInstallMappings'
-//            }
-//            domainInstancesRebuilder(DomainClassUnmarshaller) {
-//                elasticSearchContextHolder = ref('elasticSearchContextHolder')
-//                elasticSearchClient = ref('elasticSearchClient')
-//                grailsApplication = grailsApplication
-//            }
-//            customEditorRegistrar(CustomEditorRegistrar) {
-//                grailsApplication = grailsApplication
-//            }
-//
-//            if (manager?.hasGrailsPlugin('hibernate') || manager?.hasGrailsPlugin('hibernate4')) {
-//                hibernateProxyUnWrapper(HibernateProxyUnWrapper)
-//            }
-//
-//            domainClassUnWrapperChain(DomainClassUnWrapperChain)
-//
-//            jsonDomainFactory(JSONDomainFactory) {
-//                elasticSearchContextHolder = ref('elasticSearchContextHolder')
-//                grailsApplication = grailsApplication
-//                domainClassUnWrapperChain = ref('domainClassUnWrapperChain')
-//            }
-//
-//            elasticSearchBootStrapHelper(ElasticSearchBootStrapHelper) {
-//                grailsApplication = grailsApplication
-//                elasticSearchService = ref('elasticSearchService')
-//                elasticSearchContextHolder = ref('elasticSearchContextHolder')
-//                elasticSearchAdminService = ref('elasticSearchAdminService')
-//            }
-//
-//            if (!esConfig.disableAutoIndex) {
-//                if (!esConfig.datastoreImpl) {
-//                    throw new Exception('No datastore implementation specified')
-//                }
-//                auditListener(AuditEventListener, ref(esConfig.datastoreImpl)) {
-//                    elasticSearchContextHolder = ref('elasticSearchContextHolder')
-//                    indexRequestQueue = ref('indexRequestQueue')
-//                }
-//            }
         }
     }
 
     void doWithDynamicMethods() {
         // Define the custom ElasticSearch mapping for searchable domain classes
-//		if(grailsApplication.config.elasticSearch.disableDynamicMethodsInjection == false) {
-//			DomainDynamicMethodsUtils.injectDynamicMethods(grailsApplication, applicationContext)
-//		}
+		if(grailsApplication.config.elasticSearch.disableDynamicMethodsInjection == false) {
+			DomainDynamicMethodsUtils.injectDynamicMethods(grailsApplication, applicationContext)
+		}
     }
 }
