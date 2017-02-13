@@ -298,9 +298,6 @@ Determines whether the application should launch a bulk index operation upon sta
 Default to `true`.
 ====
 
-==== `elasticSearch.index.name`
-A string indicating which ElasticSearch index should be used.  If not present, will default to the package name of the domain in question.
-
 ==== `elasticSearch.index.compound_format`
 
 Should the compound file format be used (boolean setting).
@@ -341,12 +338,6 @@ Determine the gateway type to be used.
 More details on the possible values are in the http://www.elasticsearch.org/guide/reference/modules/gateway/[ElasticSearch Documentation].
 Using a setting of "none" (possibly in combination with index.store.type set to "memory") can be useful for tests.
 
-==== `elasticSearch.maxBulkRequest`
-
-Max number of requests to process at once.
-Reduce this value if you have memory issue when indexing a big amount of data at once.
-If this setting is not specified, 500 will be use by default.
-
 ==== `elasticSearch.path.data`
 
 The location of the data files of each index / shard allocated on the node.
@@ -354,19 +345,6 @@ The location of the data files of each index / shard allocated on the node.
 ==== `elasticSearch.path.plugins`
 
 The location of plugin files such as native scripts. Each plugin will be contained in a subdirectory.
-
-==== `elasticSearch.searchableProperty.name`
-
-The name of the ElasticSearch mapping configuration property that annotates domain classes. The default is 'searchable'.
-
-==== `elasticSearch.includeTransients`
-
-Whether to index and search all non excluded transient properties. All explicitly included transients in `only` will be indexed regardless.
-
-[NOTE]
-====
-Default is `false`.
-====
 
 === Default configuration script
 
@@ -416,17 +394,6 @@ elasticSearch {
    */
   bulkIndexOnStartup = true
 
-  /**
-   *  Max number of requests to process at once. Reduce this value if you have memory issue when indexing a big amount of data
-   *  at once. If this setting is not specified, 500 will be use by default.
-   */
-  maxBulkRequest = 500
-
-
-  /**
-   * The name of the ElasticSearch mapping configuration property that annotates domain classes. The default is 'searchable'.
-   */
-  searchableProperty.name = 'searchable'
 }
 
 environments {
@@ -465,10 +432,6 @@ elasticSearch:
     disableAutoIndex: false
     index:
         compound_format: true
-    unmarshallComponents: true
-    searchableProperty:
-        name: searchable
-    includeTransients: false
 environments:
     development:
         elasticSearch:

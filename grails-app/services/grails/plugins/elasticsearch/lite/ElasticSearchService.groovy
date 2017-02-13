@@ -27,7 +27,7 @@ import reactor.spring.context.annotation.Selector
  * Created by marcoscarceles on 08/02/2017.
  */
 @Consumer
-final class ElasticSearchService implements ElasticSearchConfigAware {
+class ElasticSearchService implements ElasticSearchConfigAware {
 
     GrailsApplication grailsApplication
     ElasticSearchLiteContext elasticSearchLiteContext

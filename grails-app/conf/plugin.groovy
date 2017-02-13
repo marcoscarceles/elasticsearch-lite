@@ -38,22 +38,6 @@ elasticSearch {
     bulkIndexOnStartup = true
 
     /**
-     *  Max number of requests to process at once. Reduce this value if you have memory issue when indexing a big amount of data
-     *  at once. If this setting is not specified, 500 will be use by default.
-     */
-    maxBulkRequest = 500
-
-    /**
-     * Should component-mapped properties be unmarshalled. The default is true.
-     */
-    unmarshallComponents = true
-
-    /**
-     * The name of the ElasticSearch mapping configuration property that annotates domain classes. The default is 'searchable'.
-     */
-    searchableProperty.name = 'searchable'
-
-    /**
      * The strategy to be used in case of a conflict installing mappings
      */
     migration.strategy = 'alias'
@@ -69,11 +53,6 @@ elasticSearch {
     migration.disableAliasChange = false
 
     index.numberOfReplicas = 0
-
-    /**
-     * Whether to index and search all non excluded transient properties. All explicitly included transients in @only@ will be indexed regardless.
-     */
-    includeTransients = false
 
 	/**
 	* Disable dynamic method injection in domain class

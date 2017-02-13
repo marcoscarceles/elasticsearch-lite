@@ -76,7 +76,6 @@ elasticSearch:
     disableAutoIndex: false
     index:
         compound_format: true
-    unmarshallComponents: true
     searchableProperty:
         name: searchable
     includeTransients: false

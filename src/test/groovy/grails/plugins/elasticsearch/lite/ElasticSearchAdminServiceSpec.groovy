@@ -8,7 +8,7 @@ import spock.lang.Unroll
  * Created by @marcos-carceles on 15/01/15.
  */
 @TestFor(ElasticSearchAdminService)
-class ElasticSearchAdminServiceSpec extends Specification {
+class   ElasticSearchAdminServiceSpec extends Specification {
 
     @Unroll
     void "identifies the next index version correctly"() {

@@ -4,6 +4,7 @@ import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.lite.mapping.Mapping
 import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.json.JsonBuilder
+import org.elasticsearch.common.xcontent.XContentFactory
 
 /**
  * Created by marcoscarceles on 08/02/2017.
@@ -12,6 +13,12 @@ import groovy.json.JsonBuilder
 @Mapping(PetMarshaller)
 class Pet {
     String name
+    String photo
+
+    static constraints = {
+        name nullable:true
+        photo nullable:true
+    }
 }
 
 class PetMarshaller implements ElasticSearchMarshaller<Pet> {
@@ -26,6 +33,11 @@ class PetMarshaller implements ElasticSearchMarshaller<Pet> {
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
+                "photo"{
+                    "type" "string"
+                    "term_vector" "with_positions_offsets"
+                    "include_in_all"true
+                }
             }
         }
         return pet
@@ -33,6 +45,9 @@ class PetMarshaller implements ElasticSearchMarshaller<Pet> {
 
     @Override
     def toSource(Pet instance) {
-        return null
+        XContentFactory.jsonBuilder().startObject()
+                .field('name', instance.name)
+                .field('photo', instance.photo)
+        .endObject()
     }
 }

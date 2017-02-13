@@ -1,14 +1,11 @@
-package grails.plugins.elasticsearch.mapping
+package grails.plugins.elasticsearch.lite
 
 import grails.core.GrailsApplication
-import grails.plugins.elasticsearch.ElasticSearchContextHolder
 import grails.plugins.elasticsearch.exception.MappingException
-import grails.plugins.elasticsearch.lite.ElasticSearchAdminService
-import grails.plugins.elasticsearch.lite.ElasticSearchIndexBuilder
-import grails.plugins.elasticsearch.lite.ElasticSearchService
 import grails.test.mixin.integration.Integration
 import grails.transaction.Rollback
 import org.springframework.beans.factory.annotation.Autowired
+import spock.lang.Ignore
 import spock.lang.Specification
 import test.mapping.migration.Catalog
 import test.mapping.migration.Item
@@ -18,11 +15,11 @@ import test.mapping.migration.Item
  */
 @Integration
 @Rollback
+@Ignore("WIP")
 class MappingMigrationSpec extends Specification {
 
     @Autowired GrailsApplication grailsApplication
     @Autowired ElasticSearchIndexBuilder elasticSearchIndexBuilder
-    @Autowired ElasticSearchContextHolder elasticSearchContextHolder
     @Autowired ElasticSearchService elasticSearchService
     @Autowired ElasticSearchAdminService elasticSearchAdminService
 
@@ -38,265 +35,6 @@ class MappingMigrationSpec extends Specification {
         grailsApplication.config.elasticSearch.migration = [strategy: "none"]
         grailsApplication.config.elasticSearch.bulkIndexOnStartup = false
         elasticSearchIndexBuilder.setupIndices()
-    }
-
-    /*
-     * STRATEGY : none
-     * case 1: Nothing exists
-     * case 2: Conflict
-     */
-
-    void "An index is created when nothing exists"() {
-        given: "That an index does not exist"
-        es.deleteIndex catalogMapping.indexName
-
-        and: "Alias Configuration"
-        grailsApplication.config.elasticSearch.migration = [strategy: "none"]
-
-        expect:
-        !es.indexExists(catalogMapping.indexName)
-        !es.indexExists(catalogMapping.queryingIndex)
-        !es.indexExists(catalogMapping.indexingIndex)
-
-        when: "Installing the mappings"
-        elasticSearchIndexBuilder.setupIndices()
-
-        then: "The Index and mapping is created"
-        es.indexExists(catalogMapping.indexName)
-        es.mappingExists(catalogMapping.indexName, catalogMapping.elasticTypeName)
-
-        and: "There are aliases for reading and writing"
-        es.indexPointedBy(catalogMapping.queryingIndex) == catalogMapping.indexName
-        es.indexPointedBy(catalogMapping.indexingIndex) == catalogMapping.indexName
-
-    }
-
-    void "Read and Write aliases are created when none exist"() {
-        given: "An index without read and write aliases"
-        es.deleteAlias(catalogMapping.indexingIndex)
-        es.deleteAlias(catalogMapping.queryingIndex)
-
-        expect:
-        es.indexExists(catalogMapping.indexName)
-        !es.aliasExists(catalogMapping.indexName)
-        !es.aliasExists(catalogMapping.indexingIndex)
-        !es.aliasExists(catalogMapping.queryingIndex)
-
-        when: "Installing the mappings"
-        searchableClassMappingConfigurator.installMappings([catalogMapping])
-
-        then: "The aliases are created"
-        es.indexExists(catalogMapping.indexName)
-        es.indexPointedBy(catalogMapping.queryingIndex) == catalogMapping.indexName
-        es.indexPointedBy(catalogMapping.indexingIndex) == catalogMapping.indexName
-    }
-
-    void "when there's a conflict and no strategy is selected an exception is thrown"() {
-
-        given: "A Conflicting Catalog mapping (with nested as opposed to inner pages)"
-        //Delete existing Mapping
-        es.deleteIndex catalogMapping.indexName
-        //Create conflicting Mapping
-        catalogPagesMapping.addAttributes([component:true])
-        searchableClassMappingConfigurator.installMappings([catalogMapping])
-        //Restore initial state for next use
-        catalogPagesMapping.addAttributes([component:'inner'])
-
-        expect:
-        es.indexExists(catalogMapping.indexName)
-        !es.aliasExists(catalogMapping.indexName)
-
-        when: "No Migration Configuration"
-        grailsApplication.config.elasticSearch.migration = [strategy: "none"]
-
-        and:
-        searchableClassMappingConfigurator.installMappings([catalogMapping])
-
-        then:
-        thrown MappingException
-    }
-
-    /*
-     * STRATEGY : delete
-     * Depreceated, throws Exception now
-     */
-
-    void "when there is a conflict and strategy is 'delete' an exception is thrown"() {
-
-        given: "A Conflicting Catalog mapping (with nested as opposed to inner pages)"
-        //Delete existing Mapping
-        es.deleteIndex catalogMapping.indexName
-        //Create conflicting Mapping
-        catalogPagesMapping.addAttributes([component:true])
-        searchableClassMappingConfigurator.installMappings([catalogMapping])
-        //Restore initial state for next use
-        catalogPagesMapping.addAttributes([component:'inner'])
-
-        expect:
-        es.indexExists(catalogMapping.indexName)
-        !es.aliasExists(catalogMapping.indexName)
-
-        when: "Delete Configuration"
-        grailsApplication.config.elasticSearch.migration = [strategy: "delete"]
-
-        and:
-        searchableClassMappingConfigurator.installMappings([catalogMapping])
-
-        then:
-        thrown MappingException
-    }
-
-    /*
-     * STRATEGY : delete
-     * case 1: Incompatible Index exists
-     * case 2: Incompatible Alias exists
-     */
-
-    void "when there is a conflict and strategy is 'deleteIndex' content is deleted"() {
-
-        given: "A Conflicting Catalog mapping (with nested as opposed to inner pages)"
-        //Delete existing Mapping
-        es.deleteIndex catalogMapping.indexName
-        //Create conflicting Mapping
-        catalogPagesMapping.addAttributes([component:true])
-        searchableClassMappingConfigurator.installMappings([catalogMapping])
-        //Restore initial state for next use
-        catalogPagesMapping.addAttributes([component:'inner'])
-
-        and: "Delete Configuration"
-        grailsApplication.config.elasticSearch.migration = [strategy: "deleteIndex"]
-
-        and: "Existing content"
-        new Catalog(company:"ACME", issue: 1).save(flush:true,failOnError: true)
-        new Catalog(company:"ACME", issue: 2).save(flush:true,failOnError: true)
-        new Item(name:"Super Jump Spring Actioned Boots").save(flush:true,failOnError: true)
-        elasticSearchService.index()
-        elasticSearchAdminService.refresh()
-
-        expect:
-        es.indexExists(catalogMapping.indexName)
-        !es.aliasExists(catalogMapping.indexName)
-
-        and:
-        es.indexPointedBy(catalogMapping.queryingIndex) == catalogMapping.indexName
-        Catalog.count() == 2
-        Catalog.search("ACME").total == 2
-        Item.count() == 1
-        Item.search("Spring").total == 1
-
-        when: "Installing the conflicting mapping"
-        searchableClassMappingConfigurator.installMappings([catalogMapping])
-
-        then: "It succeeds -> The index is recreated"
-        es.indexExists(catalogMapping.indexName)
-
-        and: "It is a versioned alias to an 'alias' strategy compatible index"
-        es.aliasExists(catalogMapping.indexName)
-        es.indexPointedBy(catalogMapping.indexingIndex) == es.indexPointedBy(catalogMapping.indexName)
-        es.indexPointedBy(catalogMapping.queryingIndex) == es.indexPointedBy(catalogMapping.indexName)
-        es.versionIndex(catalogMapping.indexName, 0) == es.indexPointedBy(catalogMapping.indexName)
-        es.mappingExists catalogMapping.indexName, catalogMapping.elasticTypeName
-
-        and: "Documents are lost on ES"
-        Catalog.count() == 2
-        Catalog.search("ACME").total == 0
-
-        and: "Other documents on the same index are lost as well"
-        Item.count() == 1
-        Item.search("Spring").total == 0
-
-        cleanup:
-        Catalog.findAll().each { it.delete() }
-        Item.findAll().each { it.delete() }
-    }
-
-    void "delete on alias throws Exception because delete is deprecated"() {
-
-        given: "An alias pointing to a versioned index"
-        es.deleteIndex catalogMapping.indexName
-        es.createIndex catalogMapping.indexName, 0
-        es.pointAliasTo catalogMapping.indexName, catalogMapping.indexName, 0
-        es.pointAliasTo catalogMapping.queryingIndex, catalogMapping.indexName
-        es.pointAliasTo catalogMapping.indexingIndex, catalogMapping.indexName
-
-        and: "A Conflicting Catalog mapping (with nested as opposed to inner pages)"
-        catalogPagesMapping.addAttributes([component:true])
-        searchableClassMappingConfigurator.installMappings([catalogMapping, itemMapping])
-        catalogPagesMapping.addAttributes([component:'inner'])
-
-        and: "Delete Configuration"
-        grailsApplication.config.elasticSearch.migration = [strategy: "delete"]
-
-        expect:
-        es.indexExists(catalogMapping.indexName, 0)
-        es.indexPointedBy(catalogMapping.indexName) == es.versionIndex(catalogMapping.indexName, 0)
-        es.indexPointedBy(catalogMapping.queryingIndex) == es.versionIndex(catalogMapping.indexName, 0)
-        es.indexPointedBy(catalogMapping.indexingIndex) == es.versionIndex(catalogMapping.indexName, 0)
-
-        when: "Installing the conflicting mapping"
-        searchableClassMappingConfigurator.installMappings([catalogMapping])
-
-        then: "it fails"
-        thrown MappingException
-    }
-
-    void "deleteIndex works on alias as well"() {
-
-        given: "An alias pointing to a versioned index"
-        es.deleteIndex catalogMapping.indexName
-        es.createIndex catalogMapping.indexName, 0
-        es.pointAliasTo catalogMapping.indexName, catalogMapping.indexName, 0
-        es.pointAliasTo catalogMapping.queryingIndex, catalogMapping.indexName
-        es.pointAliasTo catalogMapping.indexingIndex, catalogMapping.indexName
-
-        and: "A Conflicting Catalog mapping (with nested as opposed to inner pages)"
-        catalogPagesMapping.addAttributes([component:true])
-        searchableClassMappingConfigurator.installMappings([catalogMapping, itemMapping])
-        catalogPagesMapping.addAttributes([component:'inner'])
-
-        and: "Delete Configuration"
-        grailsApplication.config.elasticSearch.migration = [strategy: "deleteIndex"]
-
-        and: "Existing content"
-        new Catalog(company:"ACME", issue: 1).save(flush:true,failOnError: true)
-        new Catalog(company:"ACME", issue: 2).save(flush:true,failOnError: true)
-        new Item(name:"Super Jump Spring Actioned Boots").save(flush:true,failOnError: true)
-        elasticSearchService.index()
-        elasticSearchAdminService.refresh()
-
-        expect:
-        es.indexExists(catalogMapping.indexName, 0)
-        es.indexPointedBy(catalogMapping.indexName) == es.versionIndex(catalogMapping.indexName, 0)
-        es.indexPointedBy(catalogMapping.queryingIndex) == es.versionIndex(catalogMapping.indexName, 0)
-        es.indexPointedBy(catalogMapping.indexingIndex) == es.versionIndex(catalogMapping.indexName, 0)
-        Catalog.count() == 2
-        Catalog.search("ACME").total == 2
-        Item.count() == 1
-        Item.search("Spring").total == 1
-
-        when: "Installing the conflicting mapping"
-        searchableClassMappingConfigurator.installMappings([catalogMapping])
-
-        then: "It succeeds"
-        es.mappingExists catalogMapping.indexName, catalogMapping.elasticTypeName
-
-        and: "The aliases were not modified"
-        es.indexExists(catalogMapping.indexName, 0)
-        es.indexPointedBy(catalogMapping.indexName) == es.versionIndex(catalogMapping.indexName, 0)
-        es.indexPointedBy(catalogMapping.queryingIndex) == es.versionIndex(catalogMapping.indexName, 0)
-        es.indexPointedBy(catalogMapping.indexingIndex) == es.versionIndex(catalogMapping.indexName, 0)
-
-        and: "Documents are lost on ES as mapping was recreated"
-        Catalog.count() == 2
-        Catalog.search("ACME").total == 0
-
-        and: "Other documents on the same index are lost as well"
-        Item.count() == 1
-        Item.search("Spring").total == 0
-
-        cleanup:
-        Catalog.findAll().each { it.delete() }
-        Item.findAll().each { it.delete() }
     }
 
     /*
@@ -528,23 +266,4 @@ class MappingMigrationSpec extends Specification {
 
     }
 
-    private SearchableClassMapping getCatalogMapping() {
-        elasticSearchContextHolder.getMappingContextByType(Catalog)
-    }
-
-    private SearchableClassPropertyMapping getCatalogPagesMapping() {
-        catalogMapping.propertiesMapping.find {
-            it.propertyName == "pages"
-        }
-    }
-
-    private SearchableClassMapping getItemMapping() {
-        elasticSearchContextHolder.getMappingContextByType(Item)
-    }
-
-    private SearchableClassPropertyMapping getItemSupplierMapping() {
-        itemMapping.propertiesMapping.find {
-            it.propertyName == "supplier"
-        }
-    }
 }
