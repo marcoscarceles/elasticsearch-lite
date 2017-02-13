@@ -1,4 +1,4 @@
-package grails.plugins.elasticsearch
+package grails.plugins.elasticsearch.lite
 
 import grails.test.mixin.TestFor
 import spock.lang.Specification

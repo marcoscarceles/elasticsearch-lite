@@ -15,14 +15,14 @@ import static grails.plugins.elasticsearch.mapping.MappingMigrationStrategy.none
  * Created by marcoscarceles on 08/02/2017.
  */
 @Slf4j
-class ElasticSearchBootstrap implements ElasticSearchConfigAware {
+class ElasticSearchIndexBuilder implements ElasticSearchConfigAware {
 
     GrailsApplication grailsApplication
     ElasticSearchLiteContext elasticSearchLiteContext
-    ElasticSearchAdminClient elasticSearchAdminClient
+    ElasticSearchAdminService elasticSearchAdminService
     LiteMigrationManager liteMigrationManager
 
-    void installMappings() {
+    void setupIndices() {
         Map<Class<?>, ElasticSearchType> types = elasticSearchLiteContext.getElasticSearchTypes()
         Map<String, Map<Class<?>, ElasticSearchType>> indices = types.groupBy {k, v ->
             v.index
@@ -44,7 +44,7 @@ class ElasticSearchBootstrap implements ElasticSearchConfigAware {
             log.debug("Installing mappings for index " + indexName)
 
             //If the index does not exist we attempt to create all the mappings at once with it
-            if(!elasticSearchAdminClient.indexExists(indexName)) {
+            if(!elasticSearchAdminService.indexExists(indexName)) {
                 try {
                     if (log.isDebugEnabled()) {
                         log.debug("Creating index [" + indexName + "] => with new mappings:")
@@ -63,7 +63,7 @@ class ElasticSearchBootstrap implements ElasticSearchConfigAware {
                         log.debug("Installing mapping [" + elasticSearchType.type + "] => " + elasticSearchType.marshaller.mapping.toPrettyString())
                     }
                     try {
-                        elasticSearchAdminClient.createMapping elasticSearchType
+                        elasticSearchAdminService.createMapping elasticSearchType
                     } catch (IllegalArgumentException e) {
                         log.warn("Could not install mapping ${indexName}/${elasticSearchType.type} due to ${e.getClass()}: ${e.message}, migrations needed")
                         mappingConflicts << elasticSearchType
@@ -76,9 +76,9 @@ class ElasticSearchBootstrap implements ElasticSearchConfigAware {
             //Create them only if they don't exist so it does not mess with other migrations
             String queryingIndex = IndexNamingUtils.queryingIndexFor(indexName)
             String indexingIndex = IndexNamingUtils.indexingIndexFor(indexName)
-            if(!elasticSearchAdminClient.aliasExists(queryingIndex)) {
-                elasticSearchAdminClient.pointAliasTo(queryingIndex, indexName)
-                elasticSearchAdminClient.pointAliasTo(indexingIndex, indexName)
+            if(!elasticSearchAdminService.aliasExists(queryingIndex)) {
+                elasticSearchAdminService.pointAliasTo(queryingIndex, indexName)
+                elasticSearchAdminService.pointAliasTo(indexingIndex, indexName)
             }
         }
         if(mappingConflicts) {
@@ -86,7 +86,7 @@ class ElasticSearchBootstrap implements ElasticSearchConfigAware {
             liteMigrationManager.applyMigrations(migrationStrategy, indices, mappingConflicts, indexSettings)
         }
 
-        elasticSearchAdminClient.waitForClusterStatus(ClusterHealthStatus.YELLOW)
+        elasticSearchAdminService.waitForClusterStatus(ClusterHealthStatus.YELLOW)
     }
 
     /**
@@ -96,12 +96,12 @@ class ElasticSearchBootstrap implements ElasticSearchConfigAware {
      */
     private void createIndexWithMappings(String indexName, List<ElasticSearchType> types, Map indexSettings) throws RemoteTransportException {
         // Could be blocked on cluster level, thus wait.
-        elasticSearchAdminClient.waitForClusterStatus(ClusterHealthStatus.YELLOW)
-        if(!elasticSearchAdminClient.indexExists(indexName)) {
+        elasticSearchAdminService.waitForClusterStatus(ClusterHealthStatus.YELLOW)
+        if(!elasticSearchAdminService.indexExists(indexName)) {
             log.debug("Index ${indexName} does not exists, initiating creation...")
-            def nextVersion = elasticSearchAdminClient.getNextVersion indexName
-            elasticSearchAdminClient.createIndex indexName, nextVersion, indexSettings, types
-            elasticSearchAdminClient.pointAliasTo indexName, indexName, nextVersion
+            def nextVersion = elasticSearchAdminService.getNextVersion indexName
+            elasticSearchAdminService.createIndex indexName, nextVersion, indexSettings, types
+            elasticSearchAdminService.pointAliasTo indexName, indexName, nextVersion
         }
     }
 

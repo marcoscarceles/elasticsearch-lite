@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 import grails.plugins.Plugin
-import grails.plugins.elasticsearch.lite.ElasticSearchAdminClient
-import grails.plugins.elasticsearch.lite.ElasticSearchBootstrap
-import grails.plugins.elasticsearch.lite.ElasticSearchClient
+import grails.plugins.elasticsearch.lite.ElasticSearchIndexBuilder
 import grails.plugins.elasticsearch.lite.ElasticSearchLiteContext
 import grails.plugins.elasticsearch.lite.LiteMigrationManager
 import org.slf4j.Logger
@@ -61,28 +59,20 @@ class ElasticsearchGrailsPlugin extends Plugin {
 
     Closure doWithSpring() {
         { ->
-            ConfigObject esConfig = config.elasticSearch
-
             elasticSearchLiteContext(ElasticSearchLiteContext) {
                 grailsApplication = grailsApplication
-            }
-            elasticSearchClient(ElasticSearchClient) {
-                grailsApplication = grailsApplication
-            }
-            elasticSearchAdminClient(ElasticSearchAdminClient) {
-                elasticSearchClient = ref('elasticSearchClient')
-                elasticSearchLiteContext = ref('elasticSearchLiteContext')
             }
             liteMigrationManager(LiteMigrationManager) {
                 grailsApplication = grailsApplication
                 elasticSearchLiteContext = ref('elasticSearchLiteContext')
-                elasticSearchAdminClient = ref('elasticSearchAdminClient')
+                elasticSearchAdminService = ref('elasticSearchAdminService')
             }
-            elasticSearchBootstrap(ElasticSearchBootstrap) {
+            elasticSearchIndexBuilder(ElasticSearchIndexBuilder) { bean ->
                 grailsApplication = grailsApplication
                 elasticSearchLiteContext = ref('elasticSearchLiteContext')
-                elasticSearchAdminClient = ref('elasticSearchAdminClient')
+                elasticSearchAdminService = ref('elasticSearchAdminService')
                 liteMigrationManager = ref('liteMigrationManager')
+                bean.initMethod = 'setupIndices'
             }
 
 //            elasticSearchContextHolder(ElasticSearchContextHolder) {

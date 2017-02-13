@@ -1,6 +1,5 @@
 package grails.plugins.elasticsearch.lite
 
-import groovy.util.logging.Slf4j
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest
@@ -16,8 +15,7 @@ import java.util.regex.Matcher
 /**
  * Created by marcoscarceles on 08/02/2017.
  */
-@Slf4j
-class ElasticSearchAdminClient {
+class ElasticSearchAdminService {
 
     static transactional = false
 
@@ -25,10 +23,10 @@ class ElasticSearchAdminClient {
     private static final WAIT_FOR_INDEX_SLEEP_INTERVAL = 100
 
     ElasticSearchLiteContext elasticSearchLiteContext
-    ElasticSearchClient elasticSearchClient
+    ElasticSearchService elasticSearchService
 
     private AdminClient getAdminClient() {
-        elasticSearchClient.getClient().admin()
+        elasticSearchService.getClient().admin()
     }
 
     /**

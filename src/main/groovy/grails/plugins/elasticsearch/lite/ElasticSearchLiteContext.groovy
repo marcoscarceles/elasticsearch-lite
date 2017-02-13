@@ -39,7 +39,7 @@ class ElasticSearchLiteContext {
                 MARSHALLERS.put(clazz, mapping.value().newInstance())
             }
             if(clazz.isAnnotationPresent(Searchable)) {
-                assert MARSHALLERS.containsKey(clazz), 'All @Searchable classes require a mapping'
+                assert MARSHALLERS.containsKey(clazz), 'All @Searchable classes require a @Mapping'
                 Searchable searchable = clazz.getAnnotation(Searchable)
                 ELASTIC_TYPES.put(clazz, new ElasticSearchType(index: searchable.index(), type: searchable.type(), marshaller: MARSHALLERS[clazz]))
             }
@@ -50,6 +50,10 @@ class ElasticSearchLiteContext {
 
     Map<Class<?>, ElasticSearchType> getElasticSearchTypes() {
         ELASTIC_TYPES
+    }
+
+    boolean isSearchable(Class clazz) {
+        ELASTIC_TYPES.containsKey(clazz)
     }
 
     ElasticSearchType getType(Class clazz) {

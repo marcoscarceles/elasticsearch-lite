@@ -1,22 +1,31 @@
 package grails.plugins.elasticsearch.lite
 
 import grails.core.GrailsApplication
+import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
-import groovy.util.logging.Slf4j
+import grails.util.Holders
+import org.elasticsearch.action.delete.DeleteResponse
+import org.elasticsearch.action.index.IndexResponse
 import org.elasticsearch.client.Client
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
+import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
+import org.grails.datastore.mapping.engine.event.PostInsertEvent
+import org.grails.datastore.mapping.engine.event.PostUpdateEvent
 import org.grails.io.support.PathMatchingResourcePatternResolver
 import org.grails.io.support.Resource
+import reactor.spring.context.annotation.Consumer
+import reactor.spring.context.annotation.Selector
 
 /**
  * Created by marcoscarceles on 08/02/2017.
  */
-@Slf4j
-final class ElasticSearchClient implements ElasticSearchConfigAware {
+@Consumer
+final class ElasticSearchService implements ElasticSearchConfigAware {
 
     GrailsApplication grailsApplication
+    ElasticSearchLiteContext elasticSearchLiteContext
     private TransportClient client
 
     synchronized Client getClient() {
@@ -67,4 +76,57 @@ final class ElasticSearchClient implements ElasticSearchConfigAware {
         }
         return this.@client
     }
+
+    @Selector('gorm:postInsert')
+    void onInsert(PostInsertEvent event) {
+        onUpsert(event);
+    }
+
+    @Selector('gorm:postUpdate')
+    void onUpdate(PostUpdateEvent event) {
+        onUpsert(event);
+    }
+
+    void onUpsert(AbstractPersistenceEvent event) {
+        index(event.entityObject)
+    }
+
+    @Selector('gorm:postDelete')
+    void onDelete(AbstractPersistenceEvent event) {
+        unindex(event.entityObject)
+    }
+
+    void index(Object domainObject) {
+        Class domainClass = domainObject.class
+
+        if(elasticSearchLiteContext.isSearchable(domainClass)) {
+            log.debug("Indexing instance of ${domainClass} with id ${domainObject.id} into ElasticSearch")
+            try {
+                ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
+                ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
+
+                IndexResponse response = client.prepareIndex(esType.indexingIndex, esType.type, domainObject.id as String)
+                        .setSource(marshaller.toSource(domainObject)).get()
+            } catch (Exception e) {
+                log.debug("Unable to index instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
+            }
+        }
+    }
+
+    void unindex(Object domainObject) {
+        Class domainClass = domainObject.class
+
+        if(elasticSearchLiteContext.isSearchable(domainClass)) {
+            log.debug("Deleting instance of ${domainClass} with id ${domainObject.id} from ElasticSearch")
+            try {
+                ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
+
+                DeleteResponse response = client.prepareDelete(esType.indexingIndex, esType.type, domainObject.id as String).get()
+            } catch (Exception e) {
+                log.debug("Unable to delete instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
+            }
+        }
+
+    }
+
 }
