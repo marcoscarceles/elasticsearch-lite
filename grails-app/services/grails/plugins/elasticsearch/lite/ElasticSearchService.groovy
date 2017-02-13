@@ -3,13 +3,18 @@ package grails.plugins.elasticsearch.lite
 import grails.core.GrailsApplication
 import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
-import grails.util.Holders
+import org.elasticsearch.action.delete.DeleteRequestBuilder
 import org.elasticsearch.action.delete.DeleteResponse
+import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.action.index.IndexResponse
+import org.elasticsearch.action.search.SearchRequestBuilder
+import org.elasticsearch.action.search.SearchResponse
 import org.elasticsearch.client.Client
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
+import org.elasticsearch.index.query.MoreLikeThisQueryBuilder
+import org.elasticsearch.index.query.QueryBuilder
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.PostInsertEvent
 import org.grails.datastore.mapping.engine.event.PostUpdateEvent
@@ -96,37 +101,82 @@ final class ElasticSearchService implements ElasticSearchConfigAware {
         unindex(event.entityObject)
     }
 
-    void index(Object domainObject) {
+    IndexResponse index(Object domainObject) {
         Class domainClass = domainObject.class
-
+        IndexResponse response
         if(elasticSearchLiteContext.isSearchable(domainClass)) {
             log.debug("Indexing instance of ${domainClass} with id ${domainObject.id} into ElasticSearch")
             try {
-                ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
                 ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
 
-                IndexResponse response = client.prepareIndex(esType.indexingIndex, esType.type, domainObject.id as String)
+                response = prepareIndex(domainClass).setId(domainObject.id as String)
                         .setSource(marshaller.toSource(domainObject)).get()
             } catch (Exception e) {
-                log.debug("Unable to index instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
+                log.error("Unable to index instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
             }
         }
+        response
     }
 
-    void unindex(Object domainObject) {
-        Class domainClass = domainObject.class
+    SearchResponse search(Class domainClass, QueryBuilder query) {
+        SearchResponse response
+        if(elasticSearchLiteContext.isSearchable(domainClass)) {
+            try {
+                response = prepareSearch(domain).setQuery(query)
+            } catch (Exception e) {
+                log.error("Unable to search instance of ${domainClass} with query ${query} due to Exception", e)
+            }
+        }
+        response
+    }
 
+    DeleteResponse unindex(Object domainObject) {
+        Class domainClass = domainObject.class
+        DeleteResponse response
         if(elasticSearchLiteContext.isSearchable(domainClass)) {
             log.debug("Deleting instance of ${domainClass} with id ${domainObject.id} from ElasticSearch")
             try {
-                ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
-
-                DeleteResponse response = client.prepareDelete(esType.indexingIndex, esType.type, domainObject.id as String).get()
+                response = prepareDelete(domainClass).setId(domainObject.id as String).get()
             } catch (Exception e) {
-                log.debug("Unable to delete instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
+                log.info("Unable to delete instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
             }
         }
-
+        response
     }
 
+    IndexRequestBuilder prepareIndex(Class domain) {
+        ElasticSearchType esType = elasticSearchLiteContext.getType(domain)
+        prepareIndex(esType)
+    }
+
+    IndexRequestBuilder prepareIndex(ElasticSearchType esType) {
+        client.prepareIndex(esType.indexingIndex).setType(esType.indexingIndex)
+    }
+
+    SearchRequestBuilder prepareSearch(Class domain) {
+        ElasticSearchType esType = elasticSearchLiteContext.getType(domain)
+        prepareSearch(esType)
+    }
+
+    IndexRequestBuilder prepareSearch(ElasticSearchType esType) {
+        prepareIndex(esType.indexingIndex).setType(esType.indexingIndex)
+    }
+
+    DeleteRequestBuilder prepareDelete(Class domain) {
+        ElasticSearchType esType = elasticSearchLiteContext.getType(domain)
+        client.prepareDelete(esType)
+    }
+
+    DeleteRequestBuilder prepareDelete(ElasticSearchType esType) {
+        prepareDelete(esType.indexingIndex).setType(esType.indexingIndex)
+    }
+
+    MoreLikeThisQueryBuilder.Item moreLike(Object domain) {
+        MoreLikeThisQueryBuilder.Item item
+        if(elasticSearchLiteContext.isSearchable(domain?.class)) {
+            ElasticSearchType esType = elasticSearchLiteContext.getType(domain.class)
+            item = new MoreLikeThisQueryBuilder.Item(esType.queryingIndex, esType.type, domain.id as String)
+        }
+        return item
+    }
 }

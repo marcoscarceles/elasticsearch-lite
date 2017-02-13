@@ -1,11 +1,12 @@
 package grails.plugins.elasticsearch
 
+import grails.plugins.elasticsearch.lite.ElasticSearchAdminService
+import grails.plugins.elasticsearch.lite.ElasticSearchService
 import grails.test.mixin.integration.Integration
 import grails.transaction.Rollback
 import org.elasticsearch.index.query.QueryBuilder
 import org.elasticsearch.index.query.QueryBuilders
 import org.springframework.beans.factory.annotation.Autowired
-import spock.lang.Shared
 import spock.lang.Specification
 import test.Photo
 

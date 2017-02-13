@@ -3,6 +3,8 @@ package grails.plugins.elasticsearch
 import grails.converters.JSON
 import grails.core.GrailsApplication
 import grails.core.GrailsDomainClass
+import grails.plugins.elasticsearch.lite.ElasticSearchAdminService
+import grails.plugins.elasticsearch.lite.ElasticSearchService
 import grails.test.mixin.integration.Integration
 import grails.transaction.Rollback
 import grails.util.GrailsNameUtils

@@ -41,7 +41,7 @@ class ElasticSearchAdminService {
             indices.each {
                 adminClient.indices().delete(Requests.deleteIndexRequest(it)).actionGet()
             }
-            log.info 'Deleted indices {}', indices
+            log.info "Deleted indices ${indices}"
         }
     }
 
@@ -81,7 +81,7 @@ class ElasticSearchAdminService {
      * @param elasticMapping The mapping definition
      */
     void createMapping(ElasticSearchType elasticSearchType) {
-        log.info('Creating Elasticsearch mapping for {} and type {} ...', elasticSearchType.index, elasticSearchType.type)
+        log.info("Creating Elasticsearch mapping for ${elasticSearchType.index} and type ${elasticSearchType.type} ...")
         adminClient.indices().putMapping(
                 new PutMappingRequest(elasticSearchType.index)
                         .type(elasticSearchType.type)
