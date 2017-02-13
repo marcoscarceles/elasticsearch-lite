@@ -1,76 +1,46 @@
-== Elasticsearch Grails plugin
+== Elasticsearch Lite plugin
 
-An Elasticsearch plugin for Grails; This project is a fork based on the great work done by the guys at https://github.com/mstein/elasticsearch-grails-plugin.
+An Elasticsearch plugin for Grails; This project is based on the great work done at https://github.com/noamt/elasticsearch-grails-plugin.
+Nonetheless this plugin takes a less opinionated approach and it is just a thin layer on top of the ElasticSearch client
 
 === Why would you want to fork the original Elasticsearch plugin?
 
-The original Elasticsearch plugin relies on *Hibernate-specific* GORM components, thus rendering it unusable if you back your Grails application by any other database.
+* The original plugin relies on a bespoke mapping closure, hard to extenda and maintain.
+** In contrast this plugin allows to define your own searchable classes and reusable mappings directly on Elasticsearch terms, using Groovy JsonBuilder
+* The original plugin hooked into the GORM datastore implementation.
+** Instead this plugin listens to Reactor GORM events.
 
-=== How can I obtain the plugin?
+=== Why not just use the plain Elasticsearch client?
 
-image:https://travis-ci.org/noamt/elasticsearch-grails-plugin.svg?branch=master["Build Status", link="https://travis-ci.org/noamt/elasticsearch-grails-plugin"]
+This plugin still maps Elasticsearch indices and types to Gorm instances
+* It creates the indices and types on boot
+* It manages mapping conflicts and versions indices to resolve them
+* It listens to Reactor events to automatically index, update and delete domain objects
+* It simplifies the instantiation of an Elasticsearch client and exposes it via a service
 
-Just like any other Grails plugin, through the Grails Plugin center.
-Edit your project's +build.gradle+ file, by adding the plugin's dependency declaration:
+=== How can I migrate?
 
-----
-dependencies {
-    ...
-    compile "org.grails.plugins:elasticsearch:1.2.0"
-    ...
+This plugin relies on two annotations to mark domain classes as searchable and to map and marshall them to Elasticsearch documents: `@Searchable` and `@Mapping`.
 
-}
-----
+`@Mapping` specifies that the domain class can be marshalled into an Elasticsearch document. It takes an `ElasticSearchMarshaller` subclass as value.
+`ElasticSearchMarshaller` defines the following two methods:
 
+* `JsonBuilder getMapping()` : Must return a JSON representation of the mapping for this type
+* `toSource(T instance)` : Must return any object that can be used as a source in the Elasticsearch java API (`String`, `Map`, `ByteRef`, `XContentBuilder` ...) although `XContentBuilder` is encouraged in order to compose multiple Marshallers.
+
+`@Searchable` specifies that the domain class can be indexed and searched as document of type `type` on the Elasticsearch index `index`. All `@Searchable` annotated classes must be annotated with `@Mapping` as well.
+
+To migrate from the `elasticsearch-grails-plugin`, replace the `searchable` closure with these two annotations. To do so, it is encouraged to copy your mappings JSON from an existing environment into your `ElasticSearchMarshaller` class.
+
+This plugin does not include as many helper and dynamic methods as the original plugin and encourages users to use the plain Elasticsearch java API. These must be deleted. For extra help:
+* The client is accessible via `elasticSearchService.client`.
+* Request Builders are accesible via `elasticSearchService.prepare...` methods.
+* Marshallers are accesible via `elasticSearchLiteContext`.
+The plugin still eases the administration of Elasticsearch indices via the `elasticSearchAdminService` via helper methods and exposing an `adminClient` instance.
 
 === Versioning
 
-|===
-|Plugin Version | Grails Version | Elasticsearch Version
-
-|1.2.0
-|3.1.y
-|2.3.z
-
-|1.0.0.x
-|3.1.y
-|1.6.z
-
-|0.1.0.x
-|2.y
-|2.1.z
-
-|0.0.4.x
-|2.y
-|1.6.z
-|===
-
-=== Ohs Nos! I'm hitting a +java.lang.Exception: No datastore implementation specified+
-
-This error means that you probably haven't specified your datastore type in your +application.groovy+ or +application.yml+ file.
-This plugin has an auto-index feature which automatically propagates any changes made to searchable Domains into the search index;
-this is done by hooking into GORM's storage events but also requires a reference to the active datastore implementation.
-To fix, edit your project's +application.groovy+ or +application.yml+ file and add:
-application.groovy
-----
-elasticSearch {
-    ...
-    datastoreImpl = 'nameOfDatastoreBean'
-    ...
-}
-----
-
-application.yml
-----
-elasticSearch:
-    datastoreImpl: nameOfDatastoreBean
-----
-Where the value should be the name of the datastore bean as it is configured in the Spring context; some possible values:
-
-MongoDB::
-    +mongoDatastore+
-Hibernate::
-    +hibernateDatastore+
+The plugin is still in version 0.1.0-SNAPSHOT, which works with Grails 3.1.x and Elasticsearch 2.4.4. Part of the scope of this new plugin is to simplify versioning and make it easier to upgrade.
 
 == License
 
@@ -88,28 +58,4 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-----
-
-
-
-
-==== Here, have a yak:
-----
-                            _,,,_
-                        .-'`  (  '.
-                     .-'    ,_  ;  \___      _,
-                 __.'    )   \'.__.'(:;'.__.'/
-         __..--""       (     '.__{':');}__.'
-       .'         (    ;    (   .-|` '  |-.
-      /    (       )     )      '-p     q-'
-     (    ;     ;          ;    ; |.---.|
-     ) (              (      ;    \ o  o)
-     |  )     ;       |    )    ) /'.__/
-     )    ;  )    ;   | ;       //
-     ( )             _,\    ;  //
-     ; ( ,_,,-~""~`""   \ (   //
-      \_.'\\_            '.  /<_
-       \\_)--\             \ \--\
-   jgs )--\""`             )--\"`
-       `""`                `""`
 ----

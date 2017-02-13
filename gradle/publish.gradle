@@ -9,23 +9,23 @@ if (bintrayProperties.exists()) {
   }
 
   grailsPublish {
-    githubSlug = 'noamt/elasticsearch-grails-plugin'
+    githubSlug = 'marcoscarceles/elasticsearch-lite'
     license {
         name = 'Apache-2.0'
     }
-    title = "Elasticserach"
-    desc = "An Elasticsearch plugin for Grails"
-    developers = [noam: 'Noam Y. Tenne', marcos: 'Marcos Carceles', puneet: 'Puneet Behl', james: 'James Kleeh']
+    title = "ElasticSearch Lite"
+    desc = "Lightweight Elasticsearch plugin for Grails (for seasoned ES users)"
+    developers = [marcos: 'Marcos Carceles']
   }
 } else {
     grailsPublish {
-    githubSlug = 'noamt/elasticsearch-grails-plugin'
+    githubSlug = 'marcoscarceles/elasticsearch-lite'
     license {
         name = 'Apache-2.0'
     }
-    title = "Elasticserach"
-    desc = "An Elasticsearch plugin for Grails"
-    developers = [noam: 'Noam Y. Tenne', marcos: 'Marcos Carceles', puneet: 'Puneet Behl', james: 'James Kleeh']
+    title = "ElasticSearch Lite"
+    desc = "Lightweight Elasticsearch plugin for Grails (for seasoned ES users)"
+    developers = [marcos: 'Marcos Carceles']
   }
 }
 
@@ -42,7 +42,7 @@ if (githubProperties.exists()) {
   }
 
   githubPages {
-    repoUri = 'https://github.com/noamt/elasticsearch-grails-plugin.git'
+    repoUri = 'https://github.com/marcoscarceles/elasticsearch-lite.git'
 
     credentials {
       username = project.hasProperty('githubApiKey') ? project.githubApiKey : ''
