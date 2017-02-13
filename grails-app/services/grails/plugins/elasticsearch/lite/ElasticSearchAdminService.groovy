@@ -116,7 +116,7 @@ class ElasticSearchAdminService {
      * @param settings The index settings (ie. number of shards)
      */
     void createIndex(String index, Map settings=null, List<ElasticSearchType> elasticSearchTypes) {
-        log.debug "Creating index ${index} ..."
+        log.info "Creating index ${index} ..."
 
         CreateIndexRequestBuilder builder = adminClient.indices().prepareCreate(index)
         if (settings) {
@@ -158,7 +158,7 @@ class ElasticSearchAdminService {
     void waitForIndex(String index, int version) {
         int retries = WAIT_FOR_INDEX_MAX_RETRIES
         while (getLatestVersion(index) < version && retries--) {
-            log.debug("Index ${versionIndex(index, version)} not found, sleeping for ${WAIT_FOR_INDEX_SLEEP_INTERVAL}...")
+            log.info("Index ${versionIndex(index, version)} not found, sleeping for ${WAIT_FOR_INDEX_SLEEP_INTERVAL}...")
             Thread.sleep(WAIT_FOR_INDEX_SLEEP_INTERVAL)
         }
     }
@@ -194,12 +194,12 @@ class ElasticSearchAdminService {
      */
     void pointAliasTo(String alias, String index, Integer version = null) {
         index = versionIndex(index, version)
-        log.debug "Creating alias ${alias}, pointing to index ${index} ..."
+        log.info "Creating alias ${alias}, pointing to index ${index} ..."
         String oldIndex = indexPointedBy(alias)
         //Create atomic operation
         def aliasRequest = adminClient.indices().prepareAliases()
         if (oldIndex && oldIndex != index) {
-            log.debug "Index used to point to ${oldIndex}, removing ..."
+            log.warn "Index used to point to ${oldIndex}, removing ..."
             aliasRequest.removeAlias(oldIndex,alias)
         }
         aliasRequest.   addAlias(index,alias)
@@ -276,6 +276,6 @@ class ElasticSearchAdminService {
      */
     void waitForClusterStatus(ClusterHealthStatus status=ClusterHealthStatus.YELLOW) {
         ClusterHealthResponse response = adminClient.cluster().health(new ClusterHealthRequest([] as String[]).waitForStatus(status)).actionGet()
-        log.debug("Cluster status: ${response.status}")
+        log.info("Cluster status: ${response.status}")
     }
 }
