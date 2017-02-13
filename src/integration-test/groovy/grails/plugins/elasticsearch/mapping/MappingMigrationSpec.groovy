@@ -1,11 +1,11 @@
 package grails.plugins.elasticsearch.mapping
 
 import grails.core.GrailsApplication
-import grails.plugins.elasticsearch.ElasticSearchAdminService
-import grails.plugins.elasticsearch.ElasticSearchBootStrapHelper
 import grails.plugins.elasticsearch.ElasticSearchContextHolder
-import grails.plugins.elasticsearch.ElasticSearchService
 import grails.plugins.elasticsearch.exception.MappingException
+import grails.plugins.elasticsearch.lite.ElasticSearchAdminService
+import grails.plugins.elasticsearch.lite.ElasticSearchIndexBuilder
+import grails.plugins.elasticsearch.lite.ElasticSearchService
 import grails.test.mixin.integration.Integration
 import grails.transaction.Rollback
 import org.springframework.beans.factory.annotation.Autowired
@@ -21,11 +21,10 @@ import test.mapping.migration.Item
 class MappingMigrationSpec extends Specification {
 
     @Autowired GrailsApplication grailsApplication
-    @Autowired SearchableClassMappingConfigurator searchableClassMappingConfigurator
+    @Autowired ElasticSearchIndexBuilder elasticSearchIndexBuilder
     @Autowired ElasticSearchContextHolder elasticSearchContextHolder
     @Autowired ElasticSearchService elasticSearchService
     @Autowired ElasticSearchAdminService elasticSearchAdminService
-    @Autowired ElasticSearchBootStrapHelper elasticSearchBootStrapHelper
 
     ElasticSearchAdminService getEs() {
         elasticSearchAdminService
@@ -38,7 +37,7 @@ class MappingMigrationSpec extends Specification {
         // Recreate a clean environment as if the app had just booted
         grailsApplication.config.elasticSearch.migration = [strategy: "none"]
         grailsApplication.config.elasticSearch.bulkIndexOnStartup = false
-        searchableClassMappingConfigurator.configureAndInstallMappings()
+        elasticSearchIndexBuilder.setupIndices()
     }
 
     /*
@@ -60,7 +59,7 @@ class MappingMigrationSpec extends Specification {
         !es.indexExists(catalogMapping.indexingIndex)
 
         when: "Installing the mappings"
-        searchableClassMappingConfigurator.installMappings([catalogMapping])
+        elasticSearchIndexBuilder.setupIndices()
 
         then: "The Index and mapping is created"
         es.indexExists(catalogMapping.indexName)
