@@ -112,17 +112,17 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         prepareSearch(esType)
     }
 
-    IndexRequestBuilder prepareSearch(ElasticSearchType esType) {
-        prepareIndex(esType.indexingIndex).setType(esType.indexingIndex)
+    SearchRequestBuilder prepareSearch(ElasticSearchType esType) {
+        client.prepareSearch(esType.queryingIndex).setTypes(esType.indexingIndex)
     }
 
     DeleteRequestBuilder prepareDelete(Class domain) {
         ElasticSearchType esType = elasticSearchLiteContext.getType(domain)
-        client.prepareDelete(esType)
+        prepareDelete(esType)
     }
 
     DeleteRequestBuilder prepareDelete(ElasticSearchType esType) {
-        prepareDelete(esType.indexingIndex).setType(esType.indexingIndex)
+        client.prepareDelete().setIndex(esType.indexingIndex).setType(esType.type)
     }
 
     MoreLikeThisQueryBuilder.Item moreLike(Object domain) {
