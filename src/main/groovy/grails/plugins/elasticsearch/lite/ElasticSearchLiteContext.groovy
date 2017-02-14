@@ -7,6 +7,7 @@ import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.lite.mapping.Mapping
 import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.transform.CompileStatic
+import org.elasticsearch.client.Client
 import org.grails.core.artefact.DomainClassArtefactHandler
 
 import javax.annotation.PostConstruct
@@ -18,6 +19,7 @@ import javax.annotation.PostConstruct
 class ElasticSearchLiteContext {
 
     GrailsApplication grailsApplication
+    Client client
 
     private static Map<Class<?>, ElasticSearchType> ELASTIC_TYPES
     private static Map<Class<?>, ElasticSearchMarshaller<?>> MARSHALLERS

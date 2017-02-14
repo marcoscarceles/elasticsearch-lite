@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 import grails.plugins.Plugin
-import grails.plugins.elasticsearch.lite.ElasticSearchIndexBuilder
+import grails.plugins.elasticsearch.lite.ElasticSearchClientFactory
 import grails.plugins.elasticsearch.lite.ElasticSearchLiteContext
 import grails.plugins.elasticsearch.lite.LiteMigrationManager
 import grails.plugins.elasticsearch.util.DomainDynamicMethodsUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-class ElasticsearchGrailsPlugin extends Plugin {
+class ElasticsearchLiteGrailsPlugin extends Plugin {
 
     private static final Logger LOG = LoggerFactory.getLogger(this)
 
@@ -65,12 +65,12 @@ class ElasticsearchGrailsPlugin extends Plugin {
                 elasticSearchLiteContext = ref('elasticSearchLiteContext')
                 elasticSearchAdminService = ref('elasticSearchAdminService')
             }
-            elasticSearchIndexBuilder(ElasticSearchIndexBuilder) { bean ->
+            elasticSearchClientFactory (ElasticSearchClientFactory) { bean ->
                 grailsApplication = grailsApplication
                 elasticSearchLiteContext = ref('elasticSearchLiteContext')
                 elasticSearchAdminService = ref('elasticSearchAdminService')
                 liteMigrationManager = ref('liteMigrationManager')
-                bean.initMethod = 'setupIndices'
+                bean.initMethod = 'setup'
             }
         }
     }

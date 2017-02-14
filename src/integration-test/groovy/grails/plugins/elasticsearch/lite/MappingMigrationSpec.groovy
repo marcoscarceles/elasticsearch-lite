@@ -19,7 +19,7 @@ import test.mapping.migration.Item
 class MappingMigrationSpec extends Specification {
 
     @Autowired GrailsApplication grailsApplication
-    @Autowired ElasticSearchIndexBuilder elasticSearchIndexBuilder
+    @Autowired ElasticSearchClientFactory elasticSearchClientFactory
     @Autowired ElasticSearchService elasticSearchService
     @Autowired ElasticSearchAdminService elasticSearchAdminService
 
@@ -34,7 +34,7 @@ class MappingMigrationSpec extends Specification {
         // Recreate a clean environment as if the app had just booted
         grailsApplication.config.elasticSearch.migration = [strategy: "none"]
         grailsApplication.config.elasticSearch.bulkIndexOnStartup = false
-        elasticSearchIndexBuilder.setupIndices()
+        elasticSearchClientFactory.setup()
     }
 
     /*

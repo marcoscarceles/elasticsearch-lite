@@ -26,7 +26,7 @@ class ElasticSearchAdminService {
     ElasticSearchService elasticSearchService
 
     private AdminClient getAdminClient() {
-        elasticSearchService.getClient().admin()
+        elasticSearchLiteContext.client.admin()
     }
 
     /**

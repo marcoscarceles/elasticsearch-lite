@@ -31,55 +31,9 @@ class ElasticSearchService implements ElasticSearchConfigAware {
 
     GrailsApplication grailsApplication
     ElasticSearchLiteContext elasticSearchLiteContext
-    private TransportClient client
 
-    synchronized Client getClient() {
-
-        if(!this.@client) {
-            def transportSettings = Settings.settingsBuilder()
-
-            def transportSettingsFile = esConfig.bootstrap.transportSettings.file
-            if (transportSettingsFile) {
-                Resource resource = new PathMatchingResourcePatternResolver().getResource(transportSettingsFile)
-                transportSettings.loadFromStream(transportSettingsFile, resource.inputStream)
-            }
-            // Use the "sniff" feature of transport client ?
-            if (esConfig.client.transport.sniff) {
-                transportSettings.put("client.transport.sniff", false)
-            }
-            if (esConfig.cluster.name) {
-                transportSettings.put('cluster.name', esConfig.cluster.name.toString())
-            }
-            boolean ip4Enabled = esConfig.shield.ip4Enabled ?: true
-            boolean ip6Enabled = esConfig.shield.ip6Enabled ?: false
-
-            try {
-                Class shieldPluginClass = Class.forName("org.elasticsearch.shield.ShieldPlugin")
-                this.@client = TransportClient.builder().addPlugin(shieldPluginClass).settings(transportSettings).build();
-                log.info("Shield Enabled")
-            } catch (ClassNotFoundException e) {
-                this.@client = TransportClient.builder().settings(transportSettings).build()
-            }
-
-            // Configure transport addresses
-            if (!esConfig.client.hosts) {
-                this.@client.addTransportAddress(new InetSocketTransportAddress(new InetSocketAddress('localhost', 9300)))
-            } else {
-                esConfig.client.hosts.each {
-                    try {
-                        for (InetAddress address : InetAddress.getAllByName(it.host)) {
-                            if ((ip6Enabled && address instanceof Inet6Address) || (ip4Enabled && address instanceof Inet4Address)) {
-                                log.info("Adding host: ${address}")
-                                this.@client.addTransportAddress(new InetSocketTransportAddress(address, it.port));
-                            }
-                        }
-                    } catch (UnknownHostException e) {
-                        log.error("Unable to get the host", e.getMessage());
-                    }
-                }
-            }
-        }
-        return this.@client
+    Client getClient() {
+        elasticSearchLiteContext.client
     }
 
     @Selector('gorm:postInsert')
