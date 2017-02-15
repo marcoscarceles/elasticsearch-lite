@@ -3,6 +3,8 @@ package grails.plugins.elasticsearch.lite
 import grails.core.GrailsApplication
 import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import org.elasticsearch.action.delete.DeleteRequestBuilder
 import org.elasticsearch.action.delete.DeleteResponse
 import org.elasticsearch.action.index.IndexRequestBuilder
@@ -104,7 +106,7 @@ class ElasticSearchService implements ElasticSearchConfigAware {
     }
 
     IndexRequestBuilder prepareIndex(ElasticSearchType esType) {
-        client.prepareIndex(esType.indexingIndex).setType(esType.indexingIndex)
+        client.prepareIndex(esType.indexingIndex, esType.indexingIndex)
     }
 
     SearchRequestBuilder prepareSearch(Class domain) {
