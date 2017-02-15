@@ -78,7 +78,7 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         SearchResponse response
         if(elasticSearchLiteContext.isSearchable(domainClass)) {
             try {
-                response = prepareSearch(domain).setQuery(query)
+                response = prepareSearch(domainClass).setQuery(query).get()
             } catch (Exception e) {
                 log.error("Unable to search instance of ${domainClass} with query ${query} due to Exception", e)
             }
