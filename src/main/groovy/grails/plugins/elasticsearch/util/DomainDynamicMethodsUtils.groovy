@@ -54,6 +54,10 @@ class DomainDynamicMethodsUtils {
                 elasticSearchService.search(delegate, q)
             }
 
+            domain.metaClass.'static'.prepareSearch << { ->
+                elasticSearchService.prepareSearch(delegate)
+            }
+
             // index() method on domain instance
             domain.metaClass.index << {
                 elasticSearchService.index(delegate)
