@@ -39,7 +39,7 @@ class DomainDynamicMethodsUtils {
      * @return
      */
     static injectDynamicMethods(grailsApplication, applicationContext) {
-        def elasticSearchService = applicationContext.getBean(ElasticSearchService)
+        ElasticSearchService elasticSearchService = applicationContext.getBean(ElasticSearchService)
         ElasticSearchLiteContext elasticSearchLiteContext = applicationContext.getBean(ElasticSearchLiteContext)
 
         for (GrailsDomainClass domain in grailsApplication.domainClasses) {
@@ -51,7 +51,7 @@ class DomainDynamicMethodsUtils {
 
             // static search() method
             domain.metaClass.'static'."$searchMethodName" << { QueryBuilder q ->
-                elasticSearchService.search(domain.clazz, q)
+                elasticSearchService.search(delegate, q)
             }
 
             // index() method on domain instance
