@@ -82,6 +82,8 @@ class ElasticSearchService implements ElasticSearchConfigAware {
             } catch (Exception e) {
                 log.error("Unable to search instance of ${domainClass} with query ${query} due to Exception", e)
             }
+        } else {
+            log.warn("Attempted to serch an instance of ${domainClass}, which is not @Searchable")
         }
         response
     }
@@ -106,7 +108,7 @@ class ElasticSearchService implements ElasticSearchConfigAware {
     }
 
     IndexRequestBuilder prepareIndex(ElasticSearchType esType) {
-        client.prepareIndex(esType.indexingIndex, esType.indexingIndex)
+        client.prepareIndex(esType.indexingIndex, esType.type)
     }
 
     SearchRequestBuilder prepareSearch(Class domain) {
@@ -115,7 +117,7 @@ class ElasticSearchService implements ElasticSearchConfigAware {
     }
 
     SearchRequestBuilder prepareSearch(ElasticSearchType esType) {
-        client.prepareSearch(esType.queryingIndex).setTypes(esType.indexingIndex)
+        client.prepareSearch(esType.queryingIndex).setTypes(esType.type)
     }
 
     DeleteRequestBuilder prepareDelete(Class domain) {
