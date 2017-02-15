@@ -231,6 +231,8 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
 
     TransportClient buildTransportClient() {
 
+        TransportClient client
+
         def transportSettings = Settings.settingsBuilder()
 
         def transportSettingsFile = esConfig.bootstrap.transportSettings.file
@@ -250,22 +252,22 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
 
         try {
             Class shieldPluginClass = Class.forName("org.elasticsearch.shield.ShieldPlugin")
-            this.@client = TransportClient.builder().addPlugin(shieldPluginClass).settings(transportSettings).build();
+            client = TransportClient.builder().addPlugin(shieldPluginClass).settings(transportSettings).build();
             log.info("Shield Enabled")
         } catch (ClassNotFoundException e) {
-            this.@client = TransportClient.builder().settings(transportSettings).build()
+            client = TransportClient.builder().settings(transportSettings).build()
         }
 
         // Configure transport addresses
         if (!esConfig.client.hosts) {
-            this.@client.addTransportAddress(new InetSocketTransportAddress(new InetSocketAddress('localhost', 9300)))
+            client.addTransportAddress(new InetSocketTransportAddress(new InetSocketAddress('localhost', 9300)))
         } else {
             esConfig.client.hosts.each {
                 try {
                     for (InetAddress address : InetAddress.getAllByName(it.host)) {
                         if ((ip6Enabled && address instanceof Inet6Address) || (ip4Enabled && address instanceof Inet4Address)) {
                             log.info("Adding host: ${address}")
-                            this.@client.addTransportAddress(new InetSocketTransportAddress(address, it.port));
+                            client.addTransportAddress(new InetSocketTransportAddress(address, it.port));
                         }
                     }
                 } catch (UnknownHostException e) {
@@ -273,6 +275,8 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
                 }
             }
         }
+
+        client
     }
 
     /**
