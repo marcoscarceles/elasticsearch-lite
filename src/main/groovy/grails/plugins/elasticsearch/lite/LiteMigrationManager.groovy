@@ -4,12 +4,14 @@ import grails.core.GrailsApplication
 import grails.plugins.elasticsearch.mapping.MappingMigrationStrategy
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
 import grails.plugins.elasticsearch.util.IndexNamingUtils
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
 /**
  * Created by marcoscarceles on 08/02/2017.
  */
 @Slf4j
+@CompileStatic
 class LiteMigrationManager implements ElasticSearchConfigAware {
 
     GrailsApplication grailsApplication
@@ -32,10 +34,10 @@ class LiteMigrationManager implements ElasticSearchConfigAware {
             }
             int nextVersion = elasticSearchAdminService.getNextVersion(indexName)
             boolean buildQueryingAlias = (!conflictOnAlias || !migrationConfig?.disableAliasChange)
-            List<ElasticSearchType> elasticSearchTypes = indices[indexName].values()
+            List<ElasticSearchType> elasticSearchTypes = indices[indexName].values() as List
             rebuildIndexWithMappings(indexName, nextVersion, indexSettings, elasticSearchTypes, buildQueryingAlias)
         }
-        indices
+        indices.keySet()
     }
 
     private void rebuildIndexWithMappings(String indexName, int nextVersion, Map indexSettings, List<ElasticSearchType> elasticSearchTypes, boolean buildQueryingAlias) {

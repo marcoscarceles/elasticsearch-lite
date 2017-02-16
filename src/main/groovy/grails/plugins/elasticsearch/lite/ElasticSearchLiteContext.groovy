@@ -63,7 +63,9 @@ class ElasticSearchLiteContext {
     }
 
     public <T> ElasticSearchMarshaller<T> getMarshaller(Class<T> clazz) {
-        MARSHALLERS[clazz] as ElasticSearchMarshaller<T>
+        (MARSHALLERS[clazz] ?: MARSHALLERS.find { k, v ->
+            k.isAssignableFrom(clazz)
+        }.value) as ElasticSearchMarshaller<T>
     }
 
 }

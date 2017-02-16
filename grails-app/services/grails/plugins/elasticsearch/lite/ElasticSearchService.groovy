@@ -3,8 +3,8 @@ package grails.plugins.elasticsearch.lite
 import grails.core.GrailsApplication
 import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+import org.elasticsearch.action.bulk.BulkRequestBuilder
+import org.elasticsearch.action.bulk.BulkResponse
 import org.elasticsearch.action.delete.DeleteRequestBuilder
 import org.elasticsearch.action.delete.DeleteResponse
 import org.elasticsearch.action.index.IndexRequestBuilder
@@ -12,16 +12,11 @@ import org.elasticsearch.action.index.IndexResponse
 import org.elasticsearch.action.search.SearchRequestBuilder
 import org.elasticsearch.action.search.SearchResponse
 import org.elasticsearch.client.Client
-import org.elasticsearch.client.transport.TransportClient
-import org.elasticsearch.common.settings.Settings
-import org.elasticsearch.common.transport.InetSocketTransportAddress
 import org.elasticsearch.index.query.MoreLikeThisQueryBuilder
 import org.elasticsearch.index.query.QueryBuilder
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.PostInsertEvent
 import org.grails.datastore.mapping.engine.event.PostUpdateEvent
-import org.grails.io.support.PathMatchingResourcePatternResolver
-import org.grails.io.support.Resource
 import reactor.spring.context.annotation.Consumer
 import reactor.spring.context.annotation.Selector
 
@@ -72,6 +67,32 @@ class ElasticSearchService implements ElasticSearchConfigAware {
             }
         }
         response
+    }
+
+    BulkResponse index(Object ... domainObjects) {
+        index(domainObjects as List)
+    }
+
+    BulkResponse index(List domainObjects) {
+
+        BulkRequestBuilder bulkRequest = client.prepareBulk()
+
+        domainObjects.each { domainObject ->
+            Class domainClass = domainObject.class
+            if(elasticSearchLiteContext.isSearchable(domainClass)) {
+                log.debug("Indexing instance of ${domainClass} with id ${domainObject.id} into ElasticSearch")
+                try {
+                    ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
+                    IndexRequestBuilder indexRequest = prepareIndex(domainClass)
+                            .setId(domainObject.id as String)
+                            .setSource(marshaller.toSource(domainObject))
+                    bulkRequest.add(indexRequest)
+                } catch (Exception e) {
+                    log.error("Unable to index instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
+                }
+            }
+        }
+        bulkRequest.get()
     }
 
     SearchResponse search(Class domainClass, QueryBuilder query) {

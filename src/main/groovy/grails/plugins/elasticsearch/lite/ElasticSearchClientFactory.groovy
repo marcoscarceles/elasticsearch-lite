@@ -59,7 +59,7 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
         List<ElasticSearchType> mappingConflicts = []
 
         //Install the mappings for each index all together
-        indices.each { indexName, indexTypes ->
+        indices.each { String indexName, Map<Class<?>, ElasticSearchType> indexTypes ->
 
             log.debug("Installing mappings for index " + indexName)
 
@@ -77,7 +77,7 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
                     log.debug(rte.getMessage())
                 }
             } else { //We install the mappings one by one
-                indexTypes.each { Class clazz, elasticSearchType ->
+                indexTypes.each { Class clazz, ElasticSearchType elasticSearchType ->
                     // Install mapping
                     if (log.isDebugEnabled()) {
                         log.debug("Installing mapping [" + elasticSearchType.type + "] => " + elasticSearchType.marshaller.mapping.toPrettyString())
@@ -224,10 +224,11 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
     }
 
     //From http://groovy.329449.n5.nabble.com/Flatten-Map-using-closure-td364360.html
-    def flattenMap(map) {
-        [:].putAll(map.entrySet().flatten { it.value instanceof Map ? it.value.collect { k, v -> new MapEntry(it.key + '.' + k, v) } : it })
+    def flattenMap(Map map) {
+        [:].putAll(map.entrySet().flatten { Map.Entry it ->
+            it.value instanceof Map ? it.value.collect { k, v -> new MapEntry(it.key + '.' + k, v) } : it
+        })
     }
-
 
     TransportClient buildTransportClient() {
 
