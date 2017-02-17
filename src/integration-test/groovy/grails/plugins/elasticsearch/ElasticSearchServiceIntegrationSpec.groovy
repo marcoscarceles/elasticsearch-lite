@@ -14,6 +14,7 @@ import org.elasticsearch.search.aggregations.metrics.max.Max
 import org.elasticsearch.search.sort.FieldSortBuilder
 import org.elasticsearch.search.sort.SortOrder
 import org.grails.web.json.JSONObject
+import org.joda.time.format.ISODateTimeFormat
 import org.springframework.beans.factory.annotation.Autowired
 import spock.lang.Specification
 import test.*
@@ -21,13 +22,13 @@ import test.custom.id.Toy
 
 import static org.elasticsearch.common.unit.DistanceUnit.KILOMETERS
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery
+import static org.elasticsearch.index.query.QueryBuilders.existsQuery
 import static org.elasticsearch.index.query.QueryBuilders.geoDistanceQuery
 import static org.elasticsearch.index.query.QueryBuilders.hasParentQuery
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery
+import static org.elasticsearch.index.query.QueryBuilders.idsQuery
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery
 import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery
 import static org.elasticsearch.index.query.QueryBuilders.rangeQuery
-import static org.elasticsearch.index.query.QueryBuilders.termQuery
 import static org.elasticsearch.index.query.QueryBuilders.wildcardQuery
 import static org.elasticsearch.search.aggregations.AggregationBuilders.max
 import static org.elasticsearch.search.sort.SortBuilders.fieldSort
@@ -137,7 +138,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         elasticSearchAdminService.refresh(Product)
 
         when:
-        SearchResponse response = elasticSearchService.search(Product, termQuery('name', product.name))
+        SearchResponse response = elasticSearchService.search(Product, matchQuery('name', product.name))
 
         then:
         response.hits.totalHits == 1
@@ -157,13 +158,14 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         elasticSearchAdminService.refresh(Product)
 
         when:
-        SearchResponse response = elasticSearchService.search(Product, termQuery('name', product.name))
+        SearchResponse response = elasticSearchService.search(Product, idsQuery().addIds(product.id as String))
 
         then:
         response.hits.totalHits == 1
         Map esProduct = response.hits.hits.first().sourceAsMap()
         esProduct.name == product.name
-        esProduct.date == product.date
+        Date esDate = ISODateTimeFormat.dateTimeParser().parseDateTime(esProduct.date).toDate()
+        esDate == product.date
     }
 
     void 'a geo point location is marshalled and de-marshalled correctly'() {
@@ -182,7 +184,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         elasticSearchAdminService.refresh(Building)
 
         when:
-        SearchResponse response = elasticSearchService.search(Building,  queryStringQuery('EvileagueHQ'))
+        SearchResponse response = elasticSearchService.search(Building,  matchQuery('name', 'EvileagueHQ'))
 
         then:
         response.hits.totalHits == 1
@@ -210,12 +212,12 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         when: 'a geo distance filter search is performed'
 
         QueryBuilder distanceQuery = geoDistanceQuery('location').distance(50, KILOMETERS).lat(50).lon(13)
-        SearchResponse response = elasticSearchService.search(Building, boolQuery().filter(distanceQuery))
+        SearchResponse response = elasticSearchService.search(Building, distanceQuery)
 
         then: 'the building should be found'
         response.hits.totalHits == 1
         SearchHit esBuilding = response.hits.hits.first()
-        esBuilding.id == building.id
+        esBuilding.id == building.id as String
     }
 
     void 'searching with filtered query'() {
@@ -277,9 +279,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         elasticSearchAdminService.refresh(Store, Department, Product)
 
         when:
-        SearchResponse response = elasticSearchService.search(Department, boolQuery()
-                .must(hasParentQuery('store', matchQuery('owner', 'Horst')))
-        )
+        SearchResponse response = elasticSearchService.search(Department, hasParentQuery('store', matchQuery('owner', 'Horst')))
 
         then:
         response.hits.totalHits
@@ -339,14 +339,12 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         when: 'another search is performed'
         sort1 = new FieldSortBuilder('name').order(SortOrder.DESC)
         sort2 = new FieldSortBuilder('price').order(SortOrder.ASC)
-        params = [indices: Product, types: Product, sort: [sort1, sort2]]
-        query = {
-            wildcard(name: 'yogurt*')
-        }
+
         response = elasticSearchService.prepareSearch(Product)
                 .setQuery(wildcardQuery('name', 'yogurt*'))
                 .addSort(sort1)
-                addSort(sort2)
+                .addSort(sort2)
+        .get()
         esProducts = response.hits.hits*.sourceAsMap()
 
         then: 'the correct result-part is returned'
@@ -367,27 +365,19 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
             GeoPoint geoPoint = new GeoPoint(lat: it.lat, lon: it.lon).save(failOnError: true)
             buildings << new Building(name: "Postcode ${it.name}", location: geoPoint).save(failOnError: true)
         }
+        elasticSearchService.index(buildings)
+        elasticSearchAdminService.refresh(Building)
 
         when: 'a geo distance search is performed'
-        Map params = [indices: Building, types: Building]
-        QueryBuilder query = matchAllQuery()
-        def location = [lat: 48.141, lon: 11.57]
-
-        Closure filter = {
-            geo_distance(
-                    'distance': distance,
-                    'location': location
-            )
-        }
         SearchResponse response = elasticSearchService.search(Building, boolQuery()
-                .must(termQuery('name', 'Postcode'))
-                .filter(geoDistanceQuery('location').distance(distance))
+                .must(matchQuery('name', 'Postcode'))
+                .filter(geoDistanceQuery('location').distance(distance).lat(48.141).lon(11.57))
         )
 
         then: 'all geo points in the search radius are found'
         response.hits.totalHits == postalCodesFound.size()
         List<Map> esBuildings = response.hits.hits*.sourceAsMap()
-        esBuildings*.name == postalCodesFound
+        esBuildings*.name as Set == postalCodesFound as Set
 
         cleanup:
         buildings.each {
@@ -419,7 +409,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
 
         then:
         response.hits.totalHits == 1
-        response.hits.hits.first().id == plane.id
+        response.hits.hits.first().id == plane.id as String
     }
 
     void 'bulk test'() {
@@ -439,7 +429,11 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
 
         when:
         elasticSearchAdminService.refresh(Spaceship)
-        SearchResponse searchResponse = elasticSearchService.prepareSearch(Spaceship).setQuery(wildcardQuery('name', 'Ship-*')).setSize(0).get()
+
+        SearchResponse searchResponse = elasticSearchService.prepareSearch(Spaceship).setQuery(boolQuery()
+                .filter(matchQuery('name', 'Ship'))
+                .filter(existsQuery('captain'))
+        ).setSize(0).get()
 
         then:
         searchResponse.hits.totalHits == 1858
@@ -457,6 +451,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                 .setQuery(matchQuery('name', 'jim'))
                 .addAggregation(max('max_price').field('price'))
+        .get()
 
         then:
         response.hits.totalHits == 2

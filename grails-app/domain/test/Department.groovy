@@ -4,6 +4,8 @@ import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.lite.mapping.Mapping
 import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.json.JsonBuilder
+import org.elasticsearch.common.xcontent.XContentBuilder
+import org.elasticsearch.common.xcontent.XContentFactory
 
 @Searchable(index = 'test', type = 'department')
 @Mapping(DepartmentMarhsaller)
@@ -53,8 +55,11 @@ class DepartmentMarhsaller implements ElasticSearchMarshaller<Department> {
         return department
     }
 
-    @Override
-    def toSource(Department instance) {
-        return null
+
+    XContentBuilder toSource(XContentBuilder source = XContentFactory.jsonBuilder(), Department instance) {
+        source.startObject()
+                .field('name', instance.name)
+                .field('numberOfProducts', instance.numberOfProducts)
+        .endObject()
     }
 }

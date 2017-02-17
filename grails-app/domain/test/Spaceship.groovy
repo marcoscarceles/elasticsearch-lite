@@ -63,7 +63,7 @@ class SpaceshipMarshaller implements ElasticSearchMarshaller<Spaceship> {
                 .field('shipData',instance.shipData)
         if(instance.captain) {
             PersonMarshaller personMarshaller = TestMarshallers.getMarshaller(Person)
-            personMarshaller.toSource(source.field('captain'))
+            personMarshaller.toSource(source.field('captain'), instance.captain)
         }
         source.endObject()
     }

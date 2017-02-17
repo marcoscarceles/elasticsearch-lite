@@ -50,7 +50,7 @@ class BuildingMarshaller implements ElasticSearchMarshaller<Building> {
                 .field('date', building.date)
         if(building.location) {
             GeoPointMarshaller m = TestMarshallers.getMarshaller(building.location)
-            m.toSource(source, building.location)
+            m.toSource(source.field('location'), building.location)
         }
         source.endObject()
     }
