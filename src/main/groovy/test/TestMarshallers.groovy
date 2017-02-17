@@ -17,7 +17,7 @@ public class TestMarshallers {
             ctx = Holders.getGrailsApplication().getMainContext().getBean(ElasticSearchLiteContext)
         }
         if(object) {
-            marshaller = ctx.getMarshaller(object.class)
+            marshaller = ctx.getMarshaller(object instanceof Class ? object : object.class)
         }
         marshaller
     }

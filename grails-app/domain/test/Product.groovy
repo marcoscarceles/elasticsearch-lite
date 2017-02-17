@@ -43,12 +43,12 @@ class ProductMarshaller implements ElasticSearchMarshaller<Product> {
                 "name"{
                     "type" "string"
                     "term_vector" "with_positions_offsets"
-                    "include_in_all"true
+                    "include_in_all" true
                 }
                 "description"{
                     "type" "string"
                     "term_vector" "with_positions_offsets"
-                    "include_in_all"true
+                    "include_in_all" true
                 }
                 "product" {
                     "type" "double"

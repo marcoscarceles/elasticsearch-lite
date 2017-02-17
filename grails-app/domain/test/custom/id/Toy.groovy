@@ -1,10 +1,14 @@
 package test.custom.id
 
 import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
+import grails.plugins.elasticsearch.lite.mapping.Mapping
+import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.json.JsonBuilder
 import org.elasticsearch.common.xcontent.XContentBuilder
 import org.elasticsearch.common.xcontent.XContentFactory
 
+@Searchable(index = 'test.custom.id', type = 'toy')
+@Mapping(ToyMarshaller)
 class Toy {
     UUID id
     String name
