@@ -91,6 +91,14 @@ dependencies {
     compile "org.elasticsearch.plugin:mapper-attachments:${elasticsearchVersion}"
 }
 
+tasks.withType(Test) {
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat = 'full'
+    }
+}
+
+
 task wrapper(type: Wrapper) {
     gradleVersion = gradleWrapperVersion
 }
