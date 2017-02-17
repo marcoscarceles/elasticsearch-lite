@@ -6,6 +6,7 @@ import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder
 import org.elasticsearch.action.admin.indices.exists.types.TypesExistsRequest
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest
+import org.elasticsearch.action.admin.indices.refresh.RefreshResponse
 import org.elasticsearch.client.AdminClient
 import org.elasticsearch.client.Requests
 import org.elasticsearch.cluster.health.ClusterHealthStatus
@@ -27,6 +28,17 @@ class ElasticSearchAdminService {
 
     private AdminClient getAdminClient() {
         elasticSearchLiteContext.client.admin()
+    }
+
+    RefreshResponse refresh(Class ... domainClasses) {
+        if(!domainClasses) {
+            return adminClient.indices().prepareRefresh().get()
+        } else {
+            String[] indices = domainClasses.collect {
+                elasticSearchLiteContext.getType(it)?.index
+            }.findAll().unique() as String[]
+            return adminClient.indices().prepareRefresh(indices).get()
+        }
     }
 
     /**
