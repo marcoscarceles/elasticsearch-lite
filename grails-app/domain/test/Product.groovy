@@ -66,7 +66,6 @@ class ProductMarshaller implements ElasticSearchMarshaller<Product> {
         return product
     }
 
-    @Override
     def toSource(XContentBuilder source = XContentFactory.jsonBuilder(), Product product) {
         source.startObject()
                 .field('name', product.name)

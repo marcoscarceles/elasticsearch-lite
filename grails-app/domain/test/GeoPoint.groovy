@@ -25,7 +25,6 @@ class GeoPointMarshaller implements ElasticSearchMarshaller<GeoPoint> {
         throw new UnsupportedOperationException()
     }
 
-    @Override
     XContentBuilder toSource(XContentBuilder source = XContentFactory.jsonBuilder(), GeoPoint instance) {
         source.startObject()
                 .field('lat', instance.lat)

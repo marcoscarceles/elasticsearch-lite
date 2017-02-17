@@ -1,12 +1,14 @@
 package test
 
 import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
+import grails.plugins.elasticsearch.lite.mapping.Mapping
 import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.json.JsonBuilder
 import org.elasticsearch.common.xcontent.XContentBuilder
 import org.elasticsearch.common.xcontent.XContentFactory
 
 @Searchable(index = 'test', type = 'store')
+@Mapping(StoreMarshaller)
 class Store {
 
     String name
@@ -35,7 +37,7 @@ class StoreMarshaller implements ElasticSearchMarshaller<Store> {
     @Override
     JsonBuilder getMapping() {
         JsonBuilder store = new JsonBuilder()
-        product {
+        store {
             "properties" {
                 "name"{
                     "type" "string"
@@ -57,7 +59,6 @@ class StoreMarshaller implements ElasticSearchMarshaller<Store> {
         return store
     }
 
-    @Override
     XContentBuilder toSource(XContentBuilder source = XContentFactory.jsonBuilder(), Store instance) {
         source.startObject()
                 .field('name', instance.name)

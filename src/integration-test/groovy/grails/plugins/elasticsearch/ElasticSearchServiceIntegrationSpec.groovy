@@ -110,7 +110,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         when:
         elasticSearchService.unindex(product)
 
-        and:
+        then:
         elasticSearchService.search(Product, queryStringQuery('myTestProduct')).hits.totalHits == 0
     }
 
@@ -358,11 +358,11 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
                 .setQuery(wildcardQuery('name', 'yogurt*'))
                 .addSort(sort1)
                 addSort(sort2)
+        esProducts = response.hits.hits*.sourceAsMap()
 
         then: 'the correct result-part is returned'
         response.hits.totalHits == 4
         response.hits.size() == 4
-        esProducts = response.hits.hits*.sourceAsMap()
         esProducts*.name == ['Yogurt1', 'Yogurt1', 'Yogurt0', 'Yogurt0']
         esProducts*.price == [0, 1, 0, 1]
     }

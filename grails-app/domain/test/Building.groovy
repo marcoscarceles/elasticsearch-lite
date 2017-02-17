@@ -38,7 +38,6 @@ class BuildingMarshaller implements ElasticSearchMarshaller<Building> {
         return building
     }
 
-    @Override
     XContentBuilder toSource(XContentBuilder source = XContentFactory.jsonBuilder(),  Building building) {
         source.startObject()
                 .field('name', building.name)

@@ -42,7 +42,6 @@ class ToyMarshaller implements ElasticSearchMarshaller<Toy> {
         toy
     }
 
-    @Override
     XContentBuilder toSource(XContentBuilder source = XContentFactory.jsonBuilder(), Toy instance) {
         source.startObject()
                 .field('name', instance.name)
