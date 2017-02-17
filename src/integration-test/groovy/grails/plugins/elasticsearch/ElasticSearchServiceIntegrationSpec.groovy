@@ -1,51 +1,29 @@
 package grails.plugins.elasticsearch
 
-import grails.converters.JSON
 import grails.core.GrailsApplication
-import grails.core.GrailsDomainClass
 import grails.plugins.elasticsearch.lite.ElasticSearchAdminService
 import grails.plugins.elasticsearch.lite.ElasticSearchService
-import grails.plugins.elasticsearch.lite.mapping.Searchable
 import grails.test.mixin.integration.Integration
 import grails.transaction.Rollback
-import grails.util.GrailsNameUtils
-import org.elasticsearch.action.admin.cluster.state.ClusterStateRequestBuilder
 import org.elasticsearch.action.bulk.BulkResponse
-import org.elasticsearch.action.get.GetRequest
-import org.elasticsearch.action.search.SearchRequest
 import org.elasticsearch.action.search.SearchResponse
 import org.elasticsearch.action.search.SearchType
-import org.elasticsearch.client.AdminClient
-import org.elasticsearch.client.ClusterAdminClient
-import org.elasticsearch.cluster.ClusterState
-import org.elasticsearch.cluster.metadata.IndexMetaData
-import org.elasticsearch.cluster.metadata.MappingMetaData
-import org.elasticsearch.common.unit.DistanceUnit
 import org.elasticsearch.index.query.QueryBuilder
-import org.elasticsearch.index.query.QueryBuilders
 import org.elasticsearch.search.SearchHit
-import org.elasticsearch.search.aggregations.AggregationBuilders
 import org.elasticsearch.search.aggregations.metrics.max.Max
-import org.elasticsearch.search.builder.SearchSourceBuilder
 import org.elasticsearch.search.sort.FieldSortBuilder
-import org.elasticsearch.search.sort.SortBuilders
 import org.elasticsearch.search.sort.SortOrder
-import org.grails.core.DefaultGrailsDomainClass
 import org.grails.web.json.JSONObject
 import org.springframework.beans.factory.annotation.Autowired
-import spock.lang.Ignore
 import spock.lang.Specification
 import test.*
 import test.custom.id.Toy
-
-import java.math.RoundingMode
 
 import static org.elasticsearch.common.unit.DistanceUnit.KILOMETERS
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery
 import static org.elasticsearch.index.query.QueryBuilders.geoDistanceQuery
 import static org.elasticsearch.index.query.QueryBuilders.hasParentQuery
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery
-import static org.elasticsearch.index.query.QueryBuilders.matchQuery
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery
 import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery
 import static org.elasticsearch.index.query.QueryBuilders.rangeQuery
@@ -103,12 +81,14 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
 
         and:
         elasticSearchService.index(product) //Not necessary, but just in case GORM events hadn't triggered yet
+        elasticSearchAdminService.refresh(Product)
 
         then:
         elasticSearchService.search(Product, queryStringQuery('myTestProduct')).hits.totalHits == 1
 
         when:
         elasticSearchService.unindex(product)
+        elasticSearchAdminService.refresh(Product)
 
         then:
         elasticSearchService.search(Product, queryStringQuery('myTestProduct')).hits.totalHits == 0
@@ -121,6 +101,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
 
         when:
         elasticSearchService.index(product)
+        elasticSearchAdminService.refresh(Product)
 
         then:
         elasticSearchService.search(Product, queryStringQuery('myTestProduct')).hits.totalHits == 1
@@ -129,6 +110,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         product.name = 'newProductName'
         product.save(failOnError: true)
         elasticSearchService.index(product)
+        elasticSearchAdminService.refresh(Product)
 
         then:
         elasticSearchService.search(Product, queryStringQuery('myTestProduct')).hits.totalHits == 0
@@ -151,11 +133,11 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
 """
         )
         product.save(failOnError: true)
-
         elasticSearchService.index(product)
+        elasticSearchAdminService.refresh(Product)
 
         when:
-        SearchResponse response = elasticSearchService.search(Product, queryStringQuery(product.name))
+        SearchResponse response = elasticSearchService.search(Product, termQuery('name', product.name))
 
         then:
         response.hits.totalHits == 1
@@ -171,11 +153,11 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
                 name: 'product with date value',
                 date: date
         ).save(failOnError: true)
-
         elasticSearchService.index(product)
+        elasticSearchAdminService.refresh(Product)
 
         when:
-        SearchResponse response = elasticSearchService.search(Product, queryStringQuery(product.name))
+        SearchResponse response = elasticSearchService.search(Product, termQuery('name', product.name))
 
         then:
         response.hits.totalHits == 1
@@ -197,6 +179,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         ).save(failOnError: true)
 
         elasticSearchService.index(building)
+        elasticSearchAdminService.refresh(Building)
 
         when:
         SearchResponse response = elasticSearchService.search(Building,  queryStringQuery('EvileagueHQ'))
@@ -222,6 +205,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         ).save(failOnError: true)
 
         elasticSearchService.index(building)
+        elasticSearchAdminService.refresh(Building)
 
         when: 'a geo distance filter search is performed'
 
@@ -246,6 +230,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         fooProduct.save(failOnError: true)
 
         elasticSearchService.index(wurmProduct, hansProduct, fooProduct)
+        elasticSearchAdminService.refresh(Product)
 
         when: 'searching for a price'
         SearchResponse response = elasticSearchService.search(Product, boolQuery().filter(rangeQuery("price").gte(1.99).lte(2.3)))
@@ -263,7 +248,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         product01.save(failOnError: true)
 
         elasticSearchService.index(product01)
-        elasticSearchAdminService.refresh()
+        elasticSearchAdminService.refresh(Product)
 
         when: "search for 'a umlaut' "
 
@@ -289,6 +274,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         childElement.save(failOnError: true)
 
         elasticSearchService.index(parentParentElement, parentElement, childElement)
+        elasticSearchAdminService.refresh(Store, Department, Product)
 
         when:
         SearchResponse response = elasticSearchService.search(Department, boolQuery()
@@ -306,6 +292,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
             product = new Product(name: "Produkt${it}", price: it).save(failOnError: true, flush: true)
             elasticSearchService.index(product)
         }
+        elasticSearchAdminService.refresh(Product)
 
         when: 'a search is performed'
         SearchResponse response = elasticSearchService.prepareSearch(Product)
@@ -331,6 +318,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
                 elasticSearchService.index(product)
             }
         }
+        elasticSearchAdminService.refresh(Product)
 
         when: 'a search is performed'
         def sort1 = fieldSort('name').order(SortOrder.ASC)
@@ -339,6 +327,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
                 .setQuery(wildcardQuery('name', 'yogurt*'))
                 .addSort(sort1)
                 .addSort(sort2)
+        .get()
 
         then: 'the correct result-part is returned'
         response.hits.totalHits == 4
@@ -405,6 +394,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
             elasticSearchService.unindex(it)
             it.delete()
         }
+        elasticSearchAdminService.refresh(Building)
 
         where:
         distance || postalCodesFound
@@ -422,6 +412,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         def plane = new Toy(name: 'Plane', color: "Yellow")
         plane.save(failOnError: true)
         elasticSearchService.index([car, plane])
+        elasticSearchAdminService.refresh(Toy)
 
         when:
         SearchResponse response = elasticSearchService.search(Toy, queryStringQuery('Yellow'))
@@ -447,6 +438,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         !bulkResponse.hasFailures()
 
         when:
+        elasticSearchAdminService.refresh(Spaceship)
         SearchResponse searchResponse = elasticSearchService.prepareSearch(Spaceship).setQuery(wildcardQuery('name', 'Ship-*')).setSize(0).get()
 
         then:
@@ -458,13 +450,13 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         def jim = new Product(name: 'jim', price: 1.99).save(flush: true, failOnError: true)
         def xlJim = new Product(name: 'xl-jim', price: 5.99).save(flush: true, failOnError: true)
         elasticSearchService.index(jim, xlJim)
-        elasticSearchAdminService.refresh()
+        elasticSearchAdminService.refresh(Product)
 
         when:
         SearchResponse response = elasticSearchService.prepareSearch(Product)
                 .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
                 .setQuery(matchQuery('name', 'jim'))
-                .setAggregations(max('max_price').field('price'))
+                .addAggregation(max('max_price').field('price'))
 
         then:
         response.hits.totalHits == 2
