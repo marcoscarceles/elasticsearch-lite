@@ -27,7 +27,7 @@ class ElasticSearchLiteContext {
     /**
      * A Set containing all the indices that were regenerated during migration
      */
-    Set<String> indexesRebuiltOnMigration = [] as Set
+    Set<String> indicesRebuiltOnMigration = [] as Set
 
     @PostConstruct
     Map<Class, ElasticSearchMarshaller<?>> init() {

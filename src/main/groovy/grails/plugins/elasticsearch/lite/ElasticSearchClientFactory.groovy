@@ -42,8 +42,13 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
         initializeIndices()
     }
 
-    void initializeIndices() {
+    void initializeIndices(Class ... domainClasses) {
         Map<Class<?>, ElasticSearchType> types = elasticSearchLiteContext.getElasticSearchTypes()
+
+        if(domainClasses) {
+            types = types.findAll { k, v -> k in domainClasses }
+        }
+
         Map<String, Map<Class<?>, ElasticSearchType>> indices = types.groupBy {k, v ->
             v.index
         }

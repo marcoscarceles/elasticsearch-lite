@@ -127,14 +127,14 @@ class ElasticSearchAdminService {
      * @param index The name of the index
      * @param settings The index settings (ie. number of shards)
      */
-    void createIndex(String index, Map settings=null, List<ElasticSearchType> elasticSearchTypes) {
+    void createIndex(String index, Map settings=null, List<ElasticSearchType> elasticSearchTypes = null) {
         log.info "Creating index ${index} ..."
 
         CreateIndexRequestBuilder builder = adminClient.indices().prepareCreate(index)
         if (settings) {
             builder.setSettings(settings)
         }
-        elasticSearchTypes.each {
+        elasticSearchTypes?.each {
             builder.addMapping(it.type, it.marshaller.mapping.toString())
         }
         builder.execute().actionGet()
@@ -146,7 +146,7 @@ class ElasticSearchAdminService {
      * @param version the version number, if provided <index>_v<version> will be used
      * @param settings The index settings (ie. number of shards)
      */
-    void createIndex(String index, Integer version, Map settings=null, List<ElasticSearchType> elasticSearchTypes) {
+    void createIndex(String index, Integer version, Map settings=null, List<ElasticSearchType> elasticSearchTypes = null) {
         index = versionIndex(index, version)
         createIndex(index, settings, elasticSearchTypes)
     }

@@ -1,6 +1,7 @@
 package grails.plugins.elasticsearch.lite
 
 import grails.core.GrailsApplication
+import grails.plugins.elasticsearch.exception.MappingException
 import grails.plugins.elasticsearch.mapping.MappingMigrationStrategy
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
 import grails.plugins.elasticsearch.util.IndexNamingUtils
@@ -19,7 +20,9 @@ class LiteMigrationManager implements ElasticSearchConfigAware {
     ElasticSearchAdminService elasticSearchAdminService
 
     def applyMigrations(MappingMigrationStrategy migrationStrategy, Map<String, Map<Class<?>, ElasticSearchType>> indices, List<ElasticSearchType> mappingConflicts, Map indexSettings) {
-        elasticSearchLiteContext.indexesRebuiltOnMigration = applyAliasStrategy(indices, mappingConflicts, indexSettings)
+        if(migrationStrategy == MappingMigrationStrategy.alias) {
+            elasticSearchLiteContext.indicesRebuiltOnMigration = applyAliasStrategy(indices, mappingConflicts, indexSettings)
+        }
     }
 
     private Set applyAliasStrategy(Map<String, Map<Class<?>, ElasticSearchType>> indices, List<ElasticSearchType> mappingConflicts, Map indexSettings) {
@@ -29,13 +32,18 @@ class LiteMigrationManager implements ElasticSearchConfigAware {
         indexNames.each { String indexName ->
             log.debug("Creating new version and alias for conflicting index ${indexName}")
             boolean conflictOnAlias = elasticSearchAdminService.aliasExists(indexName)
-            if (!conflictOnAlias) {
-                elasticSearchAdminService.deleteIndex(indexName)
+            if (conflictOnAlias || migrationConfig?.aliasReplacesIndex) {
+                if (!conflictOnAlias) {
+                    elasticSearchAdminService.deleteIndex(indexName)
+                }
+                int nextVersion = elasticSearchAdminService.getNextVersion(indexName)
+                boolean buildQueryingAlias = (!conflictOnAlias || !migrationConfig?.disableAliasChange)
+                List<ElasticSearchType> elasticSearchTypes = indices[indexName].values() as List
+                rebuildIndexWithMappings(indexName, nextVersion, indexSettings, elasticSearchTypes, buildQueryingAlias)
+            } else {
+                throw new MappingException("Could not create alias ${indexName} to solve error installing mappings, index with the same name already exists.")
             }
-            int nextVersion = elasticSearchAdminService.getNextVersion(indexName)
-            boolean buildQueryingAlias = (!conflictOnAlias || !migrationConfig?.disableAliasChange)
-            List<ElasticSearchType> elasticSearchTypes = indices[indexName].values() as List
-            rebuildIndexWithMappings(indexName, nextVersion, indexSettings, elasticSearchTypes, buildQueryingAlias)
+
         }
         indices.keySet()
     }
