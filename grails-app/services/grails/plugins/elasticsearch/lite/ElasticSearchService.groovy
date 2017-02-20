@@ -44,12 +44,16 @@ class ElasticSearchService implements ElasticSearchConfigAware {
     }
 
     void onUpsert(AbstractPersistenceEvent event) {
-        index(event.entityObject)
+        if(elasticSearchLiteContext.autoIndexingEnabled) {
+            index(event.entityObject)
+        }
     }
 
     @Selector('gorm:postDelete')
     void onDelete(AbstractPersistenceEvent event) {
-        unindex(event.entityObject)
+        if(elasticSearchLiteContext.autoIndexingEnabled) {
+            unindex(event.entityObject)
+        }
     }
 
     IndexResponse index(Object domainObject) {
@@ -122,6 +126,30 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         }
         response
     }
+
+    BulkResponse unindex(Object ... domainObjects) {
+        index(domainObjects as List)
+    }
+
+    BulkResponse unindex(List domainObjects) {
+
+        BulkRequestBuilder bulkRequest = client.prepareBulk()
+
+        domainObjects.each { domainObject ->
+            Class domainClass = domainObject.class
+            if(elasticSearchLiteContext.isSearchable(domainClass)) {
+                log.debug("Deleting instance of ${domainClass} with id ${domainObject.id} from ElasticSearch")
+                try {
+                    DeleteRequestBuilder deleteRequest = prepareDelete(domainClass).setId(domainObject.id as String)
+                    bulkRequest.add(deleteRequest)
+                } catch (Exception e) {
+                    log.error("Unable to delete instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
+                }
+            }
+        }
+        bulkRequest.get()
+    }
+
 
     IndexRequestBuilder prepareIndex(Class domain) {
         ElasticSearchType esType = elasticSearchLiteContext.getType(domain)

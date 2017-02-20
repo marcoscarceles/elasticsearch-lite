@@ -1,4 +1,4 @@
-package grails.plugins.elasticsearch
+package grails.plugins.elasticsearch.lite
 
 import grails.plugins.elasticsearch.lite.ElasticSearchAdminService
 import grails.plugins.elasticsearch.lite.ElasticSearchService

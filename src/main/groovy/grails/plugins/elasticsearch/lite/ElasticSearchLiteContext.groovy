@@ -20,6 +20,7 @@ class ElasticSearchLiteContext {
 
     GrailsApplication grailsApplication
     Client client
+    boolean autoIndexingEnabled = true
 
     private static Map<Class<?>, ElasticSearchType> ELASTIC_TYPES
     private static Map<Class<?>, ElasticSearchMarshaller<?>> MARSHALLERS
@@ -67,5 +68,4 @@ class ElasticSearchLiteContext {
             k.isAssignableFrom(clazz)
         }.value) as ElasticSearchMarshaller<T>
     }
-
 }

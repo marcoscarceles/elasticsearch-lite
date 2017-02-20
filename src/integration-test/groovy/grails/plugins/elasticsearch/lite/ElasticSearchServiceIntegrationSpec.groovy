@@ -1,8 +1,6 @@
-package grails.plugins.elasticsearch
+package grails.plugins.elasticsearch.lite
 
 import grails.core.GrailsApplication
-import grails.plugins.elasticsearch.lite.ElasticSearchAdminService
-import grails.plugins.elasticsearch.lite.ElasticSearchService
 import grails.test.mixin.integration.Integration
 import grails.transaction.Rollback
 import org.elasticsearch.action.bulk.BulkResponse
@@ -26,6 +24,7 @@ import static org.elasticsearch.index.query.QueryBuilders.existsQuery
 import static org.elasticsearch.index.query.QueryBuilders.geoDistanceQuery
 import static org.elasticsearch.index.query.QueryBuilders.hasParentQuery
 import static org.elasticsearch.index.query.QueryBuilders.idsQuery
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery
 import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery
 import static org.elasticsearch.index.query.QueryBuilders.rangeQuery
@@ -37,6 +36,8 @@ import static org.elasticsearch.search.sort.SortBuilders.fieldSort
 @Rollback
 class ElasticSearchServiceIntegrationSpec extends Specification {
 
+    @Autowired
+    ElasticSearchLiteContext elasticSearchLiteContext
     @Autowired
     ElasticSearchService elasticSearchService
     @Autowired
@@ -414,15 +415,19 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
 
     void 'bulk test'() {
         given:
-        List<Spaceship> spaceShips = (1..1858).collect {
+        elasticSearchLiteContext.autoIndexingEnabled = false
+
+        List<Spaceship> spaceships = (1..321).collect {
             def person = new Person(firstName: 'Person', lastName: 'McNumbery' + it).save(flush: true)
-            def spaceShip = new Spaceship(name: 'Ship-' + it, captain: person).save(flush: true)
-            println "Created ${it} domains"
-            spaceShip
+            def spaceship = new Spaceship(name: 'Ship-' + it, captain: person).save(flush: true)
+            spaceship
         }
 
+        expect:
+        elasticSearchService.search(Spaceship, matchAllQuery()).hits.totalHits == 0
+
         when:
-        BulkResponse bulkResponse = elasticSearchService.index(spaceShips)
+        BulkResponse bulkResponse = elasticSearchService.index(spaceships)
 
         then:
         !bulkResponse.hasFailures()
@@ -436,7 +441,14 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         ).setSize(0).get()
 
         then:
-        searchResponse.hits.totalHits == 1858
+        searchResponse.hits.totalHits == 321
+
+        cleanup:
+        elasticSearchService.unindex(spaceships)
+        spaceships.each {
+            it.delete()
+        }
+        elasticSearchLiteContext.autoIndexingEnabled = true
     }
 
     void 'Use an aggregation'() {
