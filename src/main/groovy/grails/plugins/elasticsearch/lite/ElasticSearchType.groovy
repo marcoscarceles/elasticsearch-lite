@@ -12,7 +12,6 @@ class ElasticSearchType {
 
     String index
     String type
-    Class parent
     ElasticSearchMarshaller marshaller
 
     String getQueryingIndex() {

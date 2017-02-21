@@ -32,10 +32,9 @@ elasticSearch {
     /**
      * Should the database be indexed at startup.
      *
-     * The value may be a boolean true|false.
      * Indexing is always asynchronous (compared to Searchable plugin) and executed after BootStrap.groovy.
      */
-    bulkIndexOnStartup = true
+    bulkIndexOnStartup = 'migrated'
 
     /**
      * The strategy to be used in case of a conflict installing mappings

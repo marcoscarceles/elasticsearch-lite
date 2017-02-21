@@ -37,9 +37,11 @@ class LiteMigrationManager implements ElasticSearchConfigAware {
                     elasticSearchAdminService.deleteIndex(indexName)
                 }
                 int nextVersion = elasticSearchAdminService.getNextVersion(indexName)
-                boolean buildQueryingAlias = (!conflictOnAlias || !migrationConfig?.disableAliasChange)
                 List<ElasticSearchType> elasticSearchTypes = indices[indexName].values() as List
-                rebuildIndexWithMappings(indexName, nextVersion, indexSettings, elasticSearchTypes, buildQueryingAlias)
+                rebuildIndexWithMappings(indexName, nextVersion, indexSettings, elasticSearchTypes)
+                if(!conflictOnAlias) {
+                    elasticSearchAdminService.pointAliasTo IndexNamingUtils.queryingIndexFor(indexName), indexName, nextVersion
+                }
             } else {
                 throw new MappingException("Could not create alias ${indexName} to solve error installing mappings, index with the same name already exists.")
             }
@@ -48,13 +50,10 @@ class LiteMigrationManager implements ElasticSearchConfigAware {
         indices.keySet()
     }
 
-    private void rebuildIndexWithMappings(String indexName, int nextVersion, Map indexSettings, List<ElasticSearchType> elasticSearchTypes, boolean buildQueryingAlias) {
+    private void rebuildIndexWithMappings(String indexName, int nextVersion, Map indexSettings, List<ElasticSearchType> elasticSearchTypes) {
         elasticSearchAdminService.createIndex indexName, nextVersion, indexSettings, elasticSearchTypes
         elasticSearchAdminService.waitForIndex indexName, nextVersion //Ensure it exists so later on mappings are created on the right version
         elasticSearchAdminService.pointAliasTo indexName, indexName, nextVersion
         elasticSearchAdminService.pointAliasTo IndexNamingUtils.indexingIndexFor(indexName), indexName, nextVersion
-        if (buildQueryingAlias) {
-            elasticSearchAdminService.pointAliasTo IndexNamingUtils.queryingIndexFor(indexName), indexName, nextVersion
-        }
     }
 }

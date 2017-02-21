@@ -283,14 +283,14 @@ Determines whether the application should launch a bulk index operation upon sta
 |===
 | Value | Description
 
-| `false`
-| No indexing will happen on startup.
+| `'migrated'`
+| This is the default option. This value is related to the mapping migration strategy chosen. Any index going through a migration will be repopulated (to prevent or minimise downtime). More on <<Mapping Migrations>>.
 
-| `true`
+| `'all'`
 | All content will be indexed on startup.
 
-| `'deleted'`
-| This value is related to the mapping migration strategy chosen. If any migration is required and any content is deleted due to it, on startup only indices and mappings lost will be indexed. More on <<Mapping Migrations>>.
+| `other values`
+| No indexing will happen on startup.
 |===
 
 [NOTE]
@@ -389,10 +389,9 @@ elasticSearch {
   /**
    * Should the database be indexed at startup.
    *
-   * The value may be a boolean true|false.
    * Indexing is always asynchronous (compared to Searchable plugin) and executed after BootStrap.groovy.
    */
-  bulkIndexOnStartup = true
+  bulkIndexOnStartup = 'migrated'
 
 }
 
@@ -438,7 +437,7 @@ environments:
             client:
                 mode: local
                 transport.sniff: true
-            bulkIndexOnStartup: true
+            bulkIndexOnStartup: 'migrated'
     test:
         elasticSearch:
             client:

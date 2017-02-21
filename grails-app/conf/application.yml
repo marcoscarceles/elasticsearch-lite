@@ -66,6 +66,8 @@ grails:
                 taglib: none
                 staticparts: none
 elasticSearch:
+    bulkBatchSize: 500
+    bulkInterval: 100
     date:
         formats: ["yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"]
     client:
@@ -85,7 +87,7 @@ environments:
             client:
                 mode: local
                 transport.sniff: true
-            bulkIndexOnStartup: true
+            bulkIndexOnStartup: 'migrated'
     test:
         elasticSearch:
             client:

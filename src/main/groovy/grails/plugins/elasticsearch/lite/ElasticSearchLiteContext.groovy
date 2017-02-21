@@ -21,6 +21,7 @@ class ElasticSearchLiteContext {
     GrailsApplication grailsApplication
     Client client
     boolean autoIndexingEnabled = true
+    boolean autoIndexCompleted = false
 
     private static Map<Class<?>, ElasticSearchType> ELASTIC_TYPES
     private static Map<Class<?>, ElasticSearchMarshaller<?>> MARSHALLERS

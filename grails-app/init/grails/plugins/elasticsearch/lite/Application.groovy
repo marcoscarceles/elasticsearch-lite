@@ -1,4 +1,4 @@
-package grails.plugins.elasticsearch
+package grails.plugins.elasticsearch.lite
 
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration

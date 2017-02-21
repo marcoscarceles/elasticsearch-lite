@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import grails.plugins.Plugin
+import grails.plugins.elasticsearch.lite.ElasticSearchBootStrapHelper
 import grails.plugins.elasticsearch.lite.ElasticSearchClientFactory
 import grails.plugins.elasticsearch.lite.ElasticSearchLiteContext
 import grails.plugins.elasticsearch.lite.LiteMigrationManager
@@ -71,6 +72,13 @@ class ElasticsearchLiteGrailsPlugin extends Plugin {
                 elasticSearchAdminService = ref('elasticSearchAdminService')
                 liteMigrationManager = ref('liteMigrationManager')
                 bean.initMethod = 'setup'
+            }
+
+            elasticSearchBootStrapHelper(ElasticSearchBootStrapHelper) {
+                grailsApplication = grailsApplication
+                elasticSearchLiteContext = ref('elasticSearchLiteContext')
+                elasticSearchService = ref('elasticSearchService')
+                elasticSearchAdminService = ref('elasticSearchAdminService')
             }
         }
     }

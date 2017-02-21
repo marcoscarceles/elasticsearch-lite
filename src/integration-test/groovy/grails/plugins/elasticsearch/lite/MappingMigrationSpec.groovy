@@ -5,13 +5,13 @@ import grails.plugins.elasticsearch.exception.MappingException
 import grails.test.mixin.integration.Integration
 import grails.transaction.Rollback
 import org.springframework.beans.factory.annotation.Autowired
-import spock.lang.Ignore
 import spock.lang.Specification
 import test.mapping.migration.Catalog
 import test.mapping.migration.CatalogMarshaller
 import test.mapping.migration.Item
 import test.mapping.migration.ItemMarshaller
 
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery
 import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery
 import static org.elasticsearch.index.query.QueryBuilders.simpleQueryStringQuery
 
@@ -27,6 +27,7 @@ class MappingMigrationSpec extends Specification {
     @Autowired ElasticSearchLiteContext elasticSearchLiteContext
     @Autowired ElasticSearchService elasticSearchService
     @Autowired ElasticSearchAdminService elasticSearchAdminService
+    @Autowired ElasticSearchBootStrapHelper elasticSearchBootStrapHelper
 
     ElasticSearchAdminService getEs() {
         elasticSearchAdminService
@@ -106,6 +107,12 @@ class MappingMigrationSpec extends Specification {
         when: 'Installing new mappings'
         elasticSearchClientFactory.initializeIndices(Catalog, Item)
 
+        and: "Bootstrap runs"
+        elasticSearchBootStrapHelper.bulkIndexOnStartup()
+        while(!elasticSearchLiteContext.autoIndexCompleted) {
+            sleep(500)
+        }
+
         then: "A new version is created"
         es.indexExists catalogType.index, 11
         es.indexPointedBy(catalogType.index) == es.versionIndex(catalogType.index, 11)
@@ -180,6 +187,12 @@ class MappingMigrationSpec extends Specification {
         grailsApplication.config.elasticSearch.bulkIndexOnStartup = false //On the other cases content is recreated
         elasticSearchClientFactory.initializeIndices(Catalog, Item)
 
+        and: "Bootstrap runs"
+        elasticSearchBootStrapHelper.bulkIndexOnStartup()
+        while(!elasticSearchLiteContext.autoIndexCompleted) {
+            sleep(500)
+        }
+
         then: "Alias replaces the index"
         es.indexPointedBy(catalogType.indexingIndex) == es.versionIndex(catalogType.index, 0)
         es.indexPointedBy(catalogType.queryingIndex) == es.versionIndex(catalogType.index, 0)
@@ -208,11 +221,10 @@ class MappingMigrationSpec extends Specification {
     }
 
     /*
-     * Tests for bulkIndexOnStartup = "deleted"
+     * Tests for bulkIndexOnStartup = "migrated"
      * Zero Downtime for Alias to Alias
      * Minimise Downtime for Index to Alias
      */
-    @Ignore("WIP : Zero Downtime implementation pending")
     void "Alias -> Alias : If configuration says to recreate the content, there is zero downtime"() {
 
         given: "An existing Alias"
@@ -224,20 +236,32 @@ class MappingMigrationSpec extends Specification {
 
         and: "A mapping conflict"
         CatalogMarshaller.USE_NESTED = true
+        ItemMarshaller.USE_NESTED = true
         elasticSearchClientFactory.initializeIndices(Catalog, Item)
 
         //Restore initial state for next use
         CatalogMarshaller.USE_NESTED = false
+        ItemMarshaller.USE_NESTED = false
 
-        and: "Existing content"
+        expect:
+        Catalog.search(queryStringQuery("ACME")).hits.totalHits == 0
+        Item.search(simpleQueryStringQuery("Glue")).hits.totalHits == 0
+
+
+        when: "indexing content"
         List toIndex = []
-        toIndex << new Catalog(company:"ACME", issue: 1).save(flush:true,failOnError: true)
-        toIndex << new Catalog(company:"ACME", issue: 2).save(flush:true,failOnError: true)
-        toIndex << new Item(name:"Road Runner Ultrafast Glue").save(flush:true, failOnError: true)
+        Catalog.withNewSession { session ->
+            toIndex << new Catalog(company:"ACME", issue: 1).save(flush:true,failOnError: true)
+            toIndex << new Catalog(company:"ACME", issue: 2).save(flush:true,failOnError: true)
+            toIndex << new Item(name:"Road Runner Ultrafast Glue").save(flush:true, failOnError: true)
+            session.flush()
+            session.clear()
+        }
+
         elasticSearchService.index(toIndex)
         elasticSearchAdminService.refresh()
 
-        expect:
+        then:
         es.indexExists(catalogType.index, 0)
         es.indexPointedBy(catalogType.index) == es.versionIndex(catalogType.index, 0)
         es.indexPointedBy(catalogType.queryingIndex) == es.versionIndex(catalogType.index, 0)
@@ -251,7 +275,7 @@ class MappingMigrationSpec extends Specification {
 
         when: "The mapping is installed and migrations happens"
         grailsApplication.config.elasticSearch.migration = [strategy: "alias"]
-        grailsApplication.config.elasticSearch.bulkIndexOnStartup = "deleted"
+        grailsApplication.config.elasticSearch.bulkIndexOnStartup = "migrated"
         elasticSearchClientFactory.initializeIndices(Catalog, Item)
 
         then: "Temporarily, while indexing occurs, indexing happens on the new index, while querying on the old one"
@@ -267,10 +291,13 @@ class MappingMigrationSpec extends Specification {
 
         and: "Content isn't lost as it keeps pointing to the old index"
         Catalog.search(queryStringQuery("ACME")).hits.totalHits == 2
-        Item.search(queryString("Glue")).hits.totalHits == 1
+        Item.search(queryStringQuery("Glue")).hits.totalHits == 1
 
         when: "Bootstrap runs"
         elasticSearchBootStrapHelper.bulkIndexOnStartup()
+        while(!elasticSearchLiteContext.autoIndexCompleted) {
+            sleep(500)
+        }
         and:
         elasticSearchAdminService.refresh()
 
@@ -280,8 +307,8 @@ class MappingMigrationSpec extends Specification {
         es.indexPointedBy(catalogType.indexingIndex) == es.versionIndex(catalogType.index, 1)
 
         and: "Content is still found"
-        Catalog.search(queryStringQuery("ACME")).hits.totalHits == 2
-        Item.search(queryStringQuery("Glue")).hits.totalHits == 1
+        Catalog.search(matchAllQuery()).hits.totalHits == 2
+        Item.search(matchAllQuery()).hits.totalHits == 1
 
         cleanup:
         Catalog.findAll().each {

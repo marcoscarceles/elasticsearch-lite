@@ -17,6 +17,9 @@ import org.elasticsearch.index.query.QueryBuilder
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.PostInsertEvent
 import org.grails.datastore.mapping.engine.event.PostUpdateEvent
+import org.grails.datastore.mapping.query.api.BuildableCriteria
+import org.grails.datastore.mapping.query.api.Criteria
+import org.grails.datastore.mapping.query.api.ProjectionList
 import reactor.spring.context.annotation.Consumer
 import reactor.spring.context.annotation.Selector
 
@@ -73,6 +76,31 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         response
     }
 
+    void indexAll(Class ... domainClasses) {
+        indexAll(domainClasses as List)
+    }
+
+    void indexAll(List<Class> domainClasses) {
+        domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
+            int total = domainClass.count()
+            int batchSize = esConfig.bulkBatchSize ?: 500
+            int interval = esConfig.bulkInterval ?: 100
+            Criteria criteria = domainClass.createCriteria()
+
+            log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
+
+            0.step(total, batchSize) { offset ->
+                log.info("Indexing ${offset} to ${offset+batchSize}")
+                List instances = criteria.list(offset:offset, max:batchSize) {
+                    order("id", "desc")
+                }
+                index(instances)
+                sleep(interval)
+            }
+            log.debug("Bulk index of domain class ${domainClass} with ${total} completed")
+        }
+    }
+
     BulkResponse index(Object ... domainObjects) {
         index(domainObjects as List)
     }
@@ -125,6 +153,31 @@ class ElasticSearchService implements ElasticSearchConfigAware {
             }
         }
         response
+    }
+
+    void unindexAll(Class ... domainClasses) {
+        unindexAll(domainClasses as List)
+    }
+
+    void unindexAll(List<Class> domainClasses) {
+        domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
+            int total = domainClass.count()
+            int batchSize = esConfig.bulkBatchSize ?: 500
+            int interval = esConfig.bulkInterval ?: 100
+            Criteria criteria = domainClass.createCriteria()
+
+            log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
+
+            0.step(total, batchSize) { offset ->
+                log.info("Indexing ${offset} to ${offset+batchSize}")
+                List instances = criteria.list(offset:offset, max:batchSize) {
+                    order("id", "desc")
+                }
+                unindex(instances)
+                sleep(interval)
+            }
+            log.debug("Bulk index of domain class ${domainClass} with ${total} completed")
+        }
     }
 
     BulkResponse unindex(Object ... domainObjects) {
