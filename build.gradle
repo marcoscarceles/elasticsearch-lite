@@ -30,7 +30,7 @@ apply plugin: "org.grails.grails-gsp"
 ext {
     grailsVersion = project.grailsVersion
     gradleWrapperVersion = project.gradleWrapperVersion
-	elasticsearchVersion = "2.3.3"
+	elasticsearchVersion = "2.3.5"
 }
 
 sourceCompatibility = 1.7
@@ -64,7 +64,7 @@ sourcesJar {
     exclude "test/**/**"
 }
 
-def elasticsearchVersion = '2.3.3'
+def elasticsearchVersion = '2.3.5'
 
 dependencies {
     provided 'org.springframework.boot:spring-boot-starter-logging'
