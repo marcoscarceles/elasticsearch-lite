@@ -124,11 +124,11 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
         }
 
         switch (clientMode) {
-            case 'local':
-                client = buildLocalClient()
-                break;
             case 'transport':
                 client = buildTransportClient()
+                break;
+            case 'local':
+                client = buildLocalClient()
         }
         return client
     }
@@ -174,18 +174,22 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
         log.info "Setting embedded ElasticSearch tmp dir to ${tmpDirectory}"
         settings.put("path.home", tmpDirectory)
 
+        Client client = buildLocalClient(settings)
+        // Wait for the cluster to become alive.
+        log.info "Waiting for ElasticSearch YELLOW status."
+        client.admin().cluster().health(new ClusterHealthRequest().waitForYellowStatus()).actionGet()
+
+        return client
+    }
+
+    Client buildLocalClient(Settings.Builder settings) {
         settings.put("node.local", true)
 
         //Build node and get client
         Node node = NodeBuilder.nodeBuilder().settings(settings).node()
         node.start()
 
-        Client client = node.client()
-        // Wait for the cluster to become alive.
-        log.info "Waiting for ElasticSearch YELLOW status."
-        client.admin().cluster().health(new ClusterHealthRequest().waitForYellowStatus()).actionGet()
-
-        return client
+        node.client()
     }
 
     Settings.Builder getBaseSettings() {

@@ -1,9 +1,12 @@
 package test
 
+import grails.plugins.elasticsearch.lite.ElasticSearchType
 import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.lite.mapping.Mapping
 import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.json.JsonBuilder
+import org.elasticsearch.action.index.IndexRequestBuilder
+import org.elasticsearch.client.Client
 import org.elasticsearch.common.xcontent.XContentBuilder
 import org.elasticsearch.common.xcontent.XContentFactory
 
@@ -61,5 +64,11 @@ class DepartmentMarhsaller implements ElasticSearchMarshaller<Department> {
                 .field('name', instance.name)
                 .field('numberOfProducts', instance.numberOfProducts)
         .endObject()
+    }
+
+    @Override
+    IndexRequestBuilder buildIndex(Client client, ElasticSearchType esType, Department instance) {
+        prepareIndex(client, esType).setId(instance['id'] as String)
+                .setSource(toSource(instance)).setParent(instance.store.id as String)
     }
 }
