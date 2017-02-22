@@ -20,6 +20,7 @@ import grails.plugins.elasticsearch.lite.ElasticSearchLiteContext
 import grails.plugins.elasticsearch.lite.ElasticSearchService
 import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.util.logging.Slf4j
+import org.apache.commons.lang.WordUtils
 import org.elasticsearch.index.query.QueryBuilder
 
 /**
@@ -54,13 +55,18 @@ class DomainDynamicMethodsUtils {
                 elasticSearchService.search(delegate, q)
             }
 
-            domain.metaClass.'static'.prepareSearch << { ->
+            domain.metaClass.'static'."prepare${WordUtils.capitalize(searchMethodName)}" << { ->
                 elasticSearchService.prepareSearch(delegate)
             }
 
             // index() method on domain instance
             domain.metaClass.index << {
                 elasticSearchService.index(delegate)
+            }
+
+            // index() method on domain instance
+            domain.metaClass.'static'.indexAll << {
+                elasticSearchService.indexAll(delegate)
             }
 
             // unindex() method on domain instance

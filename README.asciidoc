@@ -1,7 +1,7 @@
 == Elasticsearch Lite plugin
 
 An Elasticsearch plugin for Grails; This project is based on the great work done at https://github.com/noamt/elasticsearch-grails-plugin.
-Nonetheless this plugin takes a less opinionated approach and it is just a thin layer on top of the ElasticSearch client
+Nonetheless this plugin takes a less opinionated, more pluggable, approach and it is just a thin layer on top of the ElasticSearch client.
 
 === Why would you want to fork the original Elasticsearch plugin?
 
