@@ -1,5 +1,6 @@
 package grails.plugins.elasticsearch.listener
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.springframework.transaction.support.TransactionSynchronizationAdapter
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -8,6 +9,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * @author Noam Y. Tenne
  */
 @Slf4j
+@CompileStatic
 class IndexSynchronization extends TransactionSynchronizationAdapter {
 
     private IndexRequestQueue indexRequestQueue
@@ -46,6 +48,7 @@ class IndexSynchronization extends TransactionSynchronizationAdapter {
                  * Record transaction resources prior to the operation so that we're able to clean them up later
                  */
                 Set existingResourceKeys = txResourceKeys()
+                Set resourceKeysAfterOp
                 try {
                     // flush to index.
                     indexRequestQueue.executeRequests()
@@ -54,7 +57,7 @@ class IndexSynchronization extends TransactionSynchronizationAdapter {
                      * If we've got a difference between the resource map keys before and after the request execution phase,
                      * it means that newly added resources were bound to the thread
                      */
-                    Set resourceKeysAfterOp = txResourceKeys()
+                    resourceKeysAfterOp = txResourceKeys()
 
                     if (existingResourceKeys != resourceKeysAfterOp) {
                         /**

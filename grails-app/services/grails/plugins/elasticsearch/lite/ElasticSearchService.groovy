@@ -129,12 +129,14 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
             IndexRequestBuilder request = buildIndex(domainObject)
             if(request) {
                 try {
-                    bulkRequest.add(marshaller.buildIndex(client, esType, domainObject))
-                } catch(Exception e) {
+                    bulkRequest.add(request)
+                } catch (Exception e) {
                     log.error("Unable to index instance of ${domainObject.class} with id ${domainObject.id} due to Exception", e)
                 }
             }
         }
+
+        bulkRequest
     }
 
     BulkResponse index(Collection domainObjects) {
@@ -207,8 +209,7 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         unindex(domainObjects as List)
     }
 
-    BulkResponse buildBulkUnindex(bulkRequest = client.prepareBulk(), Collection domainObjects) {
-
+    BulkRequestBuilder buildBulkUnindex(bulkRequest = client.prepareBulk(), Collection domainObjects) {
         domainObjects.each { domainObject ->
             Class domainClass = domainObject.class
             if(elasticSearchLiteContext.isSearchable(domainClass)) {

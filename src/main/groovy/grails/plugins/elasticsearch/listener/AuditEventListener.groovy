@@ -16,6 +16,7 @@
 package grails.plugins.elasticsearch.listener
 
 import grails.plugins.elasticsearch.lite.ElasticSearchLiteContext
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.*

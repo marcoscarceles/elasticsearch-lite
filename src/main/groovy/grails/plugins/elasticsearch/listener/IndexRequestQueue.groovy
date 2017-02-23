@@ -18,6 +18,7 @@ package grails.plugins.elasticsearch.listener
 import grails.plugins.elasticsearch.exception.IndexException
 import grails.plugins.elasticsearch.lite.ElasticSearchLiteContext
 import grails.plugins.elasticsearch.lite.ElasticSearchService
+import groovy.transform.CompileStatic
 import org.elasticsearch.action.ActionListener
 import org.elasticsearch.action.bulk.BulkItemResponse
 import org.elasticsearch.action.bulk.BulkRequestBuilder
@@ -188,13 +189,13 @@ class IndexRequestQueue {
                 if (removeFromQueue) {
                     // remove successful OR fatal ones.
                     toIndex.removeAll {
-                        item.id == it.id as String
+                        item.id == item.id as String
                     }
                     toDelete.removeAll {
-                        item.id == it.id as String
+                        item.id == item.id as String
                     }
                 }
-                if (it.failed) {
+                if (item.failed) {
                     LOG.error("Failed bulk item: $item.failureMessage")
                 }
             }
