@@ -22,7 +22,7 @@ trait ElasticSearchMarshaller<T> {
     }
 
     IndexRequestBuilder buildIndex(Client client, ElasticSearchType esType, T instance) {
-        prepareIndex(client, esType).setId(instance['id'] as String)
+        prepareIndex(client, esType).setId(instance.id as String)
                 .setSource(toSource(instance))
     }
 
@@ -39,7 +39,7 @@ trait ElasticSearchMarshaller<T> {
     }
 
     DeleteRequestBuilder buildDelete(Client client, ElasticSearchType esType, T instance) {
-        prepareDelete(client, esType).setId(instance['id'] as String)
+        prepareDelete(client, esType).setId(instance.id as String)
     }
 
 }

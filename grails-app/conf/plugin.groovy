@@ -27,7 +27,7 @@ elasticSearch {
      * Determines if the plugin should reflect any database save/update/delete automatically
      * on the ES instance. Default to false.
      */
-    disableAutoIndex = false
+    autoIndex = 'async'
 
     /**
      * Should the database be indexed at startup.

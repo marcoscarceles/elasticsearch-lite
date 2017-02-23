@@ -109,7 +109,7 @@ class MappingMigrationSpec extends Specification {
 
         and: "Bootstrap runs"
         elasticSearchBootStrapHelper.bulkIndexOnStartup()
-        while(!elasticSearchLiteContext.autoIndexCompleted) {
+        while(!elasticSearchLiteContext.initialIndexCompleted) {
             sleep(500)
         }
 
@@ -189,7 +189,7 @@ class MappingMigrationSpec extends Specification {
 
         and: "Bootstrap runs"
         elasticSearchBootStrapHelper.bulkIndexOnStartup()
-        while(!elasticSearchLiteContext.autoIndexCompleted) {
+        while(!elasticSearchLiteContext.initialIndexCompleted) {
             sleep(500)
         }
 
@@ -295,7 +295,7 @@ class MappingMigrationSpec extends Specification {
 
         when: "Bootstrap runs"
         elasticSearchBootStrapHelper.bulkIndexOnStartup()
-        while(!elasticSearchLiteContext.autoIndexCompleted) {
+        while(!elasticSearchLiteContext.initialIndexCompleted) {
             sleep(500)
         }
         and:

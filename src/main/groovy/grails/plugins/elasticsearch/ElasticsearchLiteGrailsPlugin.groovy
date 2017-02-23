@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 import grails.plugins.Plugin
+import grails.plugins.elasticsearch.listener.AuditEventListener
+import grails.plugins.elasticsearch.listener.IndexRequestQueue
 import grails.plugins.elasticsearch.lite.ElasticSearchBootStrapHelper
 import grails.plugins.elasticsearch.lite.ElasticSearchClientFactory
 import grails.plugins.elasticsearch.lite.ElasticSearchLiteContext
@@ -58,6 +60,8 @@ class ElasticsearchLiteGrailsPlugin extends Plugin {
 
     Closure doWithSpring() {
         { ->
+            ConfigObject esConfig = config.elasticSearch
+
             elasticSearchLiteContext(ElasticSearchLiteContext) {
                 grailsApplication = grailsApplication
             }
@@ -79,6 +83,17 @@ class ElasticsearchLiteGrailsPlugin extends Plugin {
                 elasticSearchLiteContext = ref('elasticSearchLiteContext')
                 elasticSearchService = ref('elasticSearchService')
                 elasticSearchAdminService = ref('elasticSearchAdminService')
+            }
+
+            if (esConfig.autoIndex && esConfig.autoIndex != 'async') {
+                indexRequestQueue(IndexRequestQueue) {
+                    elasticSearchLiteContext = ref('elasticSearchLiteContext')
+                    elasticSearchService = ref('elasticSearchService')
+                }
+                auditListener(AuditEventListener, ref(esConfig.autoIndex)) {
+                    elasticSearchLiteContext = ref('elasticSearchLiteContext')
+                    indexRequestQueue = ref('indexRequestQueue')
+                }
             }
         }
     }

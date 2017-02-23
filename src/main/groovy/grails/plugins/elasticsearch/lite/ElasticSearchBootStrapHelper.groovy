@@ -1,6 +1,5 @@
 package grails.plugins.elasticsearch.lite
 
-import grails.async.Promise
 import grails.core.GrailsApplication
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
 import groovy.util.logging.Slf4j
@@ -20,7 +19,7 @@ class ElasticSearchBootStrapHelper implements ElasticSearchConfigAware {
 
 
     void bulkIndexOnStartup() {
-        elasticSearchLiteContext.autoIndexCompleted = false
+        elasticSearchLiteContext.initialIndexCompleted = false
         def bulkIndexOnStartup = esConfig?.bulkIndexOnStartup
 
         Set<Class> classesToIndex
@@ -41,6 +40,6 @@ class ElasticSearchBootStrapHelper implements ElasticSearchConfigAware {
             elasticSearchAdminService.pointAliasTo esType.queryingIndex, esType.index, latestVersion
             elasticSearchAdminService.pointAliasTo esType.indexingIndex, esType.index, latestVersion
         }
-        elasticSearchLiteContext.autoIndexCompleted = true
+        elasticSearchLiteContext.initialIndexCompleted = true
     }
 }

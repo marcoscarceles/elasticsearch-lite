@@ -75,7 +75,7 @@ elasticSearch:
         hosts:
             - {host: localhost, port: 9300}
     defaultExcludedProperties: ['password']
-    disableAutoIndex: false
+    autoIndex: async
     index:
         compound_format: true
     searchableProperty:
@@ -93,7 +93,6 @@ environments:
             client:
                 mode: local
                 transport.sniff: true
-            datastoreImpl: hibernateDatastore
             index:
                 store.type: simplefs
                 analysis:

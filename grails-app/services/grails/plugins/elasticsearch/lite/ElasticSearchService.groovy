@@ -3,8 +3,6 @@ package grails.plugins.elasticsearch.lite
 import grails.core.GrailsApplication
 import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
-import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.elasticsearch.action.bulk.BulkRequestBuilder
 import org.elasticsearch.action.bulk.BulkResponse
@@ -18,37 +16,40 @@ import org.elasticsearch.client.Client
 import org.elasticsearch.index.query.MoreLikeThisQueryBuilder
 import org.elasticsearch.index.query.QueryBuilder
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
+import org.grails.datastore.mapping.engine.event.PostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PostInsertEvent
 import org.grails.datastore.mapping.engine.event.PostUpdateEvent
-import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
-import org.grails.datastore.mapping.query.api.ProjectionList
+import org.springframework.beans.factory.InitializingBean
 import reactor.spring.context.annotation.Consumer
-import reactor.spring.context.annotation.Selector
 
 /**
  * Created by marcoscarceles on 08/02/2017.
  */
 @Slf4j
 @Consumer
-@CompileStatic
-class ElasticSearchService implements ElasticSearchConfigAware {
+class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean {
 
     GrailsApplication grailsApplication
     ElasticSearchLiteContext elasticSearchLiteContext
 
+    @Override
+    void afterPropertiesSet() throws Exception {
+        if(esConfig.autoIndex == 'async') {
+            on('gorm:postInsert') { PostInsertEvent event ->
+                onUpsert(event)
+            }
+            on('gorm:postUpdate') { PostUpdateEvent event ->
+                onUpsert(event)
+            }
+            on('gorm:postDelete') { PostDeleteEvent event ->
+                onDelete(event)
+            }
+        }
+    }
+
     Client getClient() {
         elasticSearchLiteContext.client
-    }
-
-    @Selector('gorm:postInsert')
-    void onInsert(PostInsertEvent event) {
-        onUpsert(event);
-    }
-
-    @Selector('gorm:postUpdate')
-    void onUpdate(PostUpdateEvent event) {
-        onUpsert(event);
     }
 
     void onUpsert(AbstractPersistenceEvent event) {
@@ -57,24 +58,35 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         }
     }
 
-    @Selector('gorm:postDelete')
     void onDelete(AbstractPersistenceEvent event) {
         if(elasticSearchLiteContext.autoIndexingEnabled) {
             unindex(event.entityObject)
         }
     }
 
-    IndexResponse index(Object domainObject) {
+    IndexRequestBuilder buildIndex(Object domainObject) {
         Class domainClass = domainObject.class
-        IndexResponse response
+        IndexRequestBuilder request
         if(elasticSearchLiteContext.isSearchable(domainClass)) {
-            log.debug("Indexing instance of ${domainClass} with id ${domainObject['id']} into ElasticSearch")
+            log.debug("Building ElasticSearch request for instance of ${domainObject.class} with id ${domainObject.id}")
+            ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
+            ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
+            request = marshaller.buildIndex(client, esType, domainObject)
+        } else {
+            log.warn("Attempted to build index request for non @Searchable class ${domainClass}.")
+        }
+        request
+    }
+
+    IndexResponse index(Object domainObject) {
+        IndexRequestBuilder request = buildIndex(domainObject)
+        IndexResponse response
+        if(request) {
             try {
-                ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
-                ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
-                response = marshaller.buildIndex(client, esType, domainObject).get()
+                log.debug("Indexing instance of ${domainObject.class} with id ${domainObject.id} into ElasticSearch")
+                response = request.get()
             } catch (Exception e) {
-                log.error("Unable to index instance of ${domainClass} with id ${domainObject['id']} due to Exception", e)
+                log.error("Unable to index instance of ${domainObject.class} with id ${domainObject.id} due to Exception", e)
             }
         }
         response
@@ -84,25 +96,26 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         indexAll(domainClasses as List)
     }
 
-    @CompileDynamic
     void indexAll(List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
-            int total = domainClass.count()
-            int batchSize = esConfig.bulkBatchSize ?: 500
-            int interval = esConfig.bulkInterval ?: 100
-            Criteria criteria = domainClass.createCriteria()
+            withReadAccess(domainClass) { // Do not cache domain objects in memory
+                int total = domainClass.count()
+                int batchSize = esConfig.bulkBatchSize ?: 500
+                int interval = esConfig.bulkInterval ?: 100
+                Criteria criteria = domainClass.createCriteria()
 
-            log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
+                log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
 
-            0.step(total, batchSize) { offset ->
-                log.info("Indexing ${offset} to ${offset+batchSize}")
-                List instances = criteria.list(offset:offset, max:batchSize) {
-                    order("id", "desc")
+                0.step(total, batchSize) { offset ->
+                    log.info("Indexing ${offset} to ${offset+batchSize}")
+                    List instances = criteria.list(offset:offset, max:batchSize) {
+                        order("id", "desc")
+                    }
+                    index(instances)
+                    sleep(interval)
                 }
-                index(instances)
-                sleep(interval)
+                log.debug("Bulk index of domain class ${domainClass} with ${total} completed")
             }
-            log.debug("Bulk index of domain class ${domainClass} with ${total} completed")
         }
     }
 
@@ -110,24 +123,27 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         index(domainObjects as List)
     }
 
-    BulkResponse index(List domainObjects) {
-
-        BulkRequestBuilder bulkRequest = client.prepareBulk()
+    BulkRequestBuilder buildBulkIndex(BulkRequestBuilder bulkRequest = client.prepareBulk(), Collection domainObjects) {
 
         domainObjects.each { domainObject ->
-            Class domainClass = domainObject.class
-            if(elasticSearchLiteContext.isSearchable(domainClass)) {
-                log.debug("Indexing instance of ${domainClass} with id ${domainObject['id']} into ElasticSearch")
+            IndexRequestBuilder request = buildIndex(domainObject)
+            if(request) {
                 try {
-                    ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
-                    ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
                     bulkRequest.add(marshaller.buildIndex(client, esType, domainObject))
-                } catch (Exception e) {
-                    log.error("Unable to index instance of ${domainClass} with id ${domainObject['id']} due to Exception", e)
+                } catch(Exception e) {
+                    log.error("Unable to index instance of ${domainObject.class} with id ${domainObject.id} due to Exception", e)
                 }
             }
         }
-        bulkRequest.get()
+    }
+
+    BulkResponse index(Collection domainObjects) {
+        BulkResponse response
+        BulkRequestBuilder request = buildBulkIndex(domainObjects)
+        if(request?.numberOfActions()) {
+            response = request.get()
+        }
+        response
     }
 
     SearchResponse search(Class domainClass, QueryBuilder query) {
@@ -150,13 +166,13 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         Class domainClass = domainObject.class
         DeleteResponse response
         if(elasticSearchLiteContext.isSearchable(domainClass)) {
-            log.debug("Deleting instance of ${domainClass} with id ${domainObject['id']} from ElasticSearch")
+            log.debug("Deleting instance of ${domainClass} with id ${domainObject.id} from ElasticSearch")
             try {
                 ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
                 ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
                 response = marshaller.buildDelete(client, esType, domainObject).get()
             } catch (Exception e) {
-                log.info("Unable to delete instance of ${domainClass} with id ${domainObject['id']} due to Exception", e)
+                log.info("Unable to delete instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
             }
         }
         response
@@ -166,7 +182,6 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         unindexAll(domainClasses as List)
     }
 
-    @CompileDynamic
     void unindexAll(List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
             int total = domainClass.count()
@@ -192,24 +207,31 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         unindex(domainObjects as List)
     }
 
-    BulkResponse unindex(List domainObjects) {
-
-        BulkRequestBuilder bulkRequest = client.prepareBulk()
+    BulkResponse buildBulkUnindex(bulkRequest = client.prepareBulk(), Collection domainObjects) {
 
         domainObjects.each { domainObject ->
             Class domainClass = domainObject.class
             if(elasticSearchLiteContext.isSearchable(domainClass)) {
-                log.debug("Deleting instance of ${domainClass} with id ${domainObject['id']} from ElasticSearch")
+                log.debug("Deleting instance of ${domainClass} with id ${domainObject.id} from ElasticSearch")
                 try {
                     ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
                     ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
                     bulkRequest.add(marshaller.buildDelete(client, esType, domainObject))
                 } catch (Exception e) {
-                    log.error("Unable to delete instance of ${domainClass} with id ${domainObject['id']} due to Exception", e)
+                    log.error("Unable to delete instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
                 }
             }
         }
-        bulkRequest.get()
+        bulkRequest
+    }
+
+    BulkResponse unindex(Collection domainObjects) {
+        BulkResponse response
+        BulkRequestBuilder request = buildBulkUnindex(domainObjects)
+        if(request?.numberOfActions()) {
+            response = request.get()
+        }
+        response
     }
 
 
@@ -235,8 +257,16 @@ class ElasticSearchService implements ElasticSearchConfigAware {
         MoreLikeThisQueryBuilder.Item item
         if(elasticSearchLiteContext.isSearchable(domainObject?.class)) {
             ElasticSearchType esType = elasticSearchLiteContext.getType(domainObject.class)
-            item = new MoreLikeThisQueryBuilder.Item(esType.queryingIndex, esType.type, domainObject['id'] as String)
+            item = new MoreLikeThisQueryBuilder.Item(esType.queryingIndex, esType.type, domainObject.id as String)
         }
         return item
+    }
+
+    private <T> T withReadAccess(Class domainClass, Closure<T> closure) {
+        try {
+            domainClass.withStatelessSession(closure)
+        } catch(UnsupportedOperationException e) {
+            domainClass.withSession(closure)
+        }
     }
 }
