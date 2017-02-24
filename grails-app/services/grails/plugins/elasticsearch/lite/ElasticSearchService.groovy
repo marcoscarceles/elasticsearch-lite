@@ -54,13 +54,17 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
 
     void onUpsert(AbstractPersistenceEvent event) {
         if(elasticSearchLiteContext.autoIndexingEnabled) {
-            index(event.entityObject)
+            withReadAccess(event.entityObject.class) {
+                index(event.entityObject)
+            }
         }
     }
 
     void onDelete(AbstractPersistenceEvent event) {
         if(elasticSearchLiteContext.autoIndexingEnabled) {
-            unindex(event.entityObject)
+            withReadAccess(event.entityObject.class) {
+                unindex(event.entityObject)
+            }
         }
     }
 
