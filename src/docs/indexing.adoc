@@ -1,8 +1,8 @@
 [[indexing]]
 == Indexing
 
-With its default configuration (with the `disableAutoIndex` configuration key set to `false`), the plugin is indexing
-automatically any searchable domains when GORM/Hibernate do a save or an update in the database.
+With its default configuration (with the `'async'` configuration key set to `false`), the plugin is indexing
+automatically any searchable domains when GORM/Hibernate do a save or an update in the database and trigger and Reactor event.
 
 It also delete automatically from the index any document corresponding to a domain that is deleted from the database.
 You normally shouldn't have to worry about indexing, but sometimes you may have to do it by yourself, for example on dirty domain object that you may not want to save right now.

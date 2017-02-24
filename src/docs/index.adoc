@@ -1,5 +1,5 @@
 = Elasticsearch Plugin - Reference Documentation
-Noam Y. Tenne
+Marcos Carceles
 
 :elasticsearch: http://www.elasticsearch.org
 

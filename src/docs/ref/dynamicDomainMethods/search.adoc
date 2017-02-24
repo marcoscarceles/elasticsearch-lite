@@ -3,34 +3,26 @@
 
 #### Purpose
 
-Search through an index for the specified search query.
+Search through an index for the specified search query. This is  shortcut to `elasticSearchService.search(Class domainClass, QueryBuilder query)`
 
-The returned result only contains hits for the corresponding domain.
+Returns a `SearchResponse` object.
+
+In order to customize your search request further (eg. limiting the number of results, apply sorting, etc.) refer to `prepareSearch` which will give finer control over a `SearchRequestBuilder` instance.
 
 [NOTE]
 ====
-Only domains that are [root-mapped|guide:classMapping] have this method injected.
+Only domains that are `@Searchable`,classMapping>> have this method injected.
 ====
 
 #### Examples
 
 [source, groovy]
 ----
-def highlighter = {
-  field 'message', 0, 0
-  preTags '<strong>'
-  postTags '</strong>'
-}
+import org.elasticsearch.action.search.SearchResponse
+import static org.elasticsearch.index.query.QueryBuilders.*
 
-def res = MyDomain.search("${params.query}")
-def res = MyDomain.search("${params.query}", [from:0, size:30, highlighter:highlighter])
-def res = MyDomain.search(){
-    queryString("${params.query}")
-}
-def res = MyDomain.search(from:0, size:30) {
-    queryString("${params.query}")
-}
-
+SearchResponse response = MyDomain.search(queryStringQuery('search term'))
+SearchResponse response = MyDomain.search(matchQuery('fieldName', 'fieldValue'))
 
 ----
 
@@ -40,25 +32,13 @@ def res = MyDomain.search(from:0, size:30) {
 
 [source, groovy]
 ----
-def search(Closure query, Map params)
-def search(Map params, Closure query)
-def search(String query, Map params)
-
+SearchResponse search(QueryBuilder query)
 ----
 
 ##### Parameters
 
-* `query` - The search query. You may use one or more terms to look for, or use the Lucene syntax for advanced searching.
-* `params` - A list of additional parameters to customize the searching process
-** `from` and `size` - From (hit) and the size (number of hits) to return.
-** `sort` - Sort based on different fields including ElasticSearch's internal ones (like `_score`)
-** `highlighter` - A `Closure` containing the <<highlighting, highlighting>> settings.
+* `query` - The search query. An instance of `QueryBuilder`
 
 ##### Returned value
 
-Return a `Map` containing:
-
-* a `total` entry, representing the total number of hits found
-* a `searchResults` entry, containing the hits
-* a `scores` entry, containing the hits' scores.
-* a `highlight` entry if the `highlighter` parameter was set.
+ElasticSearch's Java API `SearchResponse`

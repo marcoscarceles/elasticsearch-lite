@@ -4,30 +4,39 @@
 #### Purpose
 
 Index domain instances to ElasticSearch.
-Internally, the plugin uses the Bulk API of ElasticSearch to perform the index requests.
+
+Depending on whether a single instance is provided or multiple ones, it will executed an isolated index request or it will make use of ElasticSearch's https://www.elastic.co/guide/en/elasticsearch/client/java-api/current/java-docs-bulk.html[Bulk API].
+The first one will minimise the latency between index requests and the documents being available for search whilst the second one minimises the amount of I/O, reusing the client's connections for a single bulk request.
+
+Decide which implementation to use based on your needs.
+
+[NOTE]
+====
+Any domains not marked as `@Searchable` will be ignored.
+====
 
 #### Examples
 
 [source, groovy]
 ----
-// Index all searchable instances
-elasticSearchService.index()
-
 // Index a specific domain instance
-MyDomain md = new MyDomain(value:'that')
-md.save()
+MyDomain md1 = new MyDomain(value:'that')
+MyDomain md2 = new MyDomain(value:'that')
+md1.save()
+md2.save()
 elasticSearchService.index(md)
+
+// Index multiple instances
+MyDomain md1 = new MyDomain(value:'that')
+MyDomain md2 = new MyDomain(value:'that')
+md1.save()
+md2.save()
+elasticSearchService.index(md1, md2)
 
 // Index a collection of domain instances
 def ds = [new MyDomain(value:'that'), new MyOtherDomain(name:'this'), new MyDomain(value:'thatagain')]
 ds*.save()
 elasticSearchService.index(ds)
-
-// Index all instances of the specified domain class
-elasticSearchService.index(MyDomain)
-elasticSearchService.index(class:MyDomain)
-elasticSearchService.index(MyDomain, MyOtherDomain)
-elasticSearchService.index([MyDomain, MyOtherDomain])
 
 ----
 
@@ -37,19 +46,19 @@ elasticSearchService.index([MyDomain, MyOtherDomain])
 
 [source, groovy]
 ----
-def index()
-def index(Map params)
-def index(Collection<Domain> domains)
-def index(Domain... domain)
-def index(Collection<Class> classes)
-def index(Class... class)
-
+IndexResponse index(Object domainObject)
+BulkIndexResponse index(Object ... domainObject)
+BulkIndexResponse index(Collection<Domain> domainObjects)
 ----
 
 ##### Parameters
 
-* `Map` params - A map containing the `Class` (or `Collection` of `Class`) of the domain. Will index ALL persisted instances of the specified class(es).
-* `Collection<Domain>` domains - A `Collection` of domain instances to index.
-* `Domain...` domain - Same as `Collection<Domain>`, but with an ellipsis.
-* `Collection<Class>` classes - A `Collection` of `Class` of the domain to index. Will index ALL persisted instances of the specified classes.
-* `Class...` classes - Same as `Collection<Class>`, but with an ellipsis.
+* `Object` domainObject - The domain object to index. The document indexed on ElasticSearch will be built using the `ElasticSearchMarsaller` implementation  provided on the domains `@Mapping` annotation
+* `Collection<Domain>` domainObjects - A `Collection` of domain instances to index.
+* `Object...` domain - Same as `Collection<Domain>`, but with an ellipsis.
+
+
+##### Returned value
+`IndexResponse` for one-off index requests.
+`BulkIndexResponse` when indexing multiple domain instances.
+`null` if no request was made (ie. the provided domain objects where not `@Searchable`)

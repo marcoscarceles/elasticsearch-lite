@@ -1,0 +1,50 @@
+[[prepareSearch]]
+=== preapreSearch
+
+#### Purpose
+
+Provides a `SearchRequestBuilder` instance for the domain's index and type that can be composed to get finer grain control over the search request sent to ElasticSearch. This is  shortcut to `elasticSearchService.prepareSearch(Class domainClass)`
+
+Returns a `SearchResponse` object.
+
+In order to customize your search request further (eg. limiting the number of results, apply sorting, etc.) refer to `prepareSearch` which will give finer control over a `SearchRequestBuilder` instance.
+
+[NOTE]
+====
+Only domains that are `@Searchable`,classMapping>> have this method injected.
+====
+
+#### Examples
+
+[source, groovy]
+----
+import org.elasticsearch.action.search.SearchResponse
+
+import static org.elasticsearch.index.query.QueryBuilders.*
+import static org.elasticsearch.search.sort.SortOrder.DESC
+
+SearchRequestBuilder request = MyDomain.prepareSearch()
+SearchResponse response = request
+        .setQuery(matchAllQuery())
+        .setFetchSource(false)
+        .addSort('date', DESC).get()
+
+----
+
+##### Description
+
+`search` signature:
+
+[source, groovy]
+----
+SearchRequestBuilder prepareSearch()
+
+----
+
+##### Parameters
+
+None
+
+##### Returned value
+
+Returns an ElasticSearch's Java API `SearchRequestBuilder`

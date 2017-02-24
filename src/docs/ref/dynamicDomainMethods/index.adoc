@@ -5,29 +5,23 @@
 
 Index specific domain instances to ElasticSearch.
 
-Internally, the plugin uses the Bulk API of ElasticSearch to perform the index requests.
+This method is a shorcut to `elasticSearchService.index(Object domainObject)` implementation. Since a single instance is provided, the plugin will execute a single `IndexRequest`. This reduces the latency between index operation the document being returned upon search, but increases the amount of I/O (network) with the ElasticSearch nodes.
+To make use ElasticSearch's https://www.elastic.co/guide/en/elasticsearch/client/java-api/current/java-docs-bulk.html[Bulk API], you can use `elasticSearchService.index(Collection domainObjects)` instead.
+
+Use and combine both based on your specific needs.
 
 [NOTE]
 ====
-Only domains that are [root-mapped|guide:classMapping] have this method injected.
+Only domains that are `@Searchable` have this method injected.
 ====
 
 #### Examples
 
 [source, groovy]
 ----
-// Index all instances of the MyDomain domain class
-MyDomain.index()
-
 // Index a specific domain instance
-MyDomain md = new MyDomain(value:'that')
-md.id = 1
+MyDomain md = new MyDomain(value:'that').save()
 md.index()
-
-// Index a collection of domain instances
-def ds = [new MyDomain(value:'that'), new MyDomain(name:'that2'), new MyDomain(value:'thatagain')]
-ds.eachWithIndex { val, i->  ds[i].id = i }
-MyDomain.index(ds)
 
 ----
 
@@ -38,18 +32,13 @@ MyDomain.index(ds)
 [source, groovy]
 ----
 // Index a specific domain instance
-def index()
-// Index ALL instances of a domain class
-static index()
-// Index a Collection of domain instances
-static index(Collection<Domain> domains)
-// Same with an ellipsis
-static index(Domain... domain)
-
+IndexResponse index()
 ----
 
 ##### Parameters
 
-* `Collection<Domain>` domains - A `Collection` of domain instances to index.
-* `Domain...` domain - Same as `Collection<Domain>`, but with an ellipsis.
-	
+None
+
+##### Returned value
+
+An instance of ElasticSearch Java API's `IndexResponse` indicating the result of the operation

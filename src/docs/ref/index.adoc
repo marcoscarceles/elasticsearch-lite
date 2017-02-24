@@ -4,6 +4,7 @@
 
 include::dynamicDomainMethods.adoc[]
 
+include::elasticSearchService.adoc[]
+
 include::elasticSearchAdminService.adoc[]
 
-include::elasticSearchService.adoc[]

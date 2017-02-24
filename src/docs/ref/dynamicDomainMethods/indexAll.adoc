@@ -1,0 +1,40 @@
+[[indexAll]]
+=== indexAll
+
+#### Purpose
+
+Index all instances of a type to ElasticSearch.
+
+When indexing multiple instances, the plguin will use ElasticSearch's https://www.elastic.co/guide/en/elasticsearch/client/java-api/current/java-docs-bulk.html[Bulk API].
+
+[NOTE]
+====
+Only domains that are `@Searchable`,classMapping>> have this method injected.
+====
+
+#### Examples
+
+[source, groovy]
+----
+// Index all instances of the MyDomain domain class
+MyDomain.indexAll()
+
+----
+
+##### Description
+
+`indexAll` signatures:
+
+[source, groovy]
+----
+// Indexes all instances of a domain class
+void indexAll()
+----
+
+##### Parameters
+
+None
+
+##### Migrating from `elasticsearch-grails-plugin`
+
+Replace all static calls on domain classes from `.index()` to `.indexAll()`

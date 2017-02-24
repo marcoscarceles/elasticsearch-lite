@@ -3,29 +3,25 @@
 
 #### Purpose
 
-Remove specific domain instances from the ElasticSearch indices.
+Delete specific domain instances from the ElasticSearch indices.
 
-Internally, the plugin uses the Bulk API of ElasticSearch to perform the delete requests.
+This method is a shorcut to `elasticSearchService.unindex(Object domainObject)` implementation. Since a single instance is provided, the plugin will execute a single `IndexRequest`. This reduces the latency between index operation the document being returned upon search, but increases the amount of I/O (network) with the ElasticSearch nodes.
+To make use ElasticSearch's https://www.elastic.co/guide/en/elasticsearch/client/java-api/current/java-docs-bulk.html[Bulk API], you can use `elasticSearchService.unindex(Collection domainObjects)` instead.
+
+Use and combine both based on your specific needs.
 
 [NOTE]
 ====
-Only domains that are [root-mapped|guide:classMapping] have this method injected.
+Only domains that are `@Searchable` have this method injected.
 ====
 
 #### Examples
 
 [source, groovy]
 ----
-// Unindex all instances of the MyDomain domain class
-MyDomain.unindex()
-
 // Unindex a specific domain instance
 MyDomain md = MyDomain.get(1)
 md.unindex()
-
-// Index a collection of domain instances
-def ds = MyDomain.findAllByValue('that')
-MyDomain.unindex(ds)
 
 ----
 
@@ -36,17 +32,14 @@ MyDomain.unindex(ds)
 [source, groovy]
 ----
 // Unindex a specific domain instance
-def unindex()
-// Unindex ALL instances of a domain class
-static unindex()
-// Unindex a Collection of domain instances
-static unindex(Collection<Domain> domains)
-// Same with an ellipsis
-static unindex(Domain... domain)
-
+DeleteResponse unindex()
 ----
 
 ##### Parameters
 
-* `Collection<Domain>` domains - A `Collection` of domain instances to unindex.
-* `Domain...` domain - Same as `Collection<Domain>`, but with an ellipsis.
+None
+
+#### Returned value
+
+An instance of ElasticSearch's Java API `DeleteResponse` detailing the response of the operation.
+

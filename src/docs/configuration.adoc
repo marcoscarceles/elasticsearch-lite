@@ -193,51 +193,12 @@ In order to change the method name to `esSearch` just update the `elasticSearch.
 ====
 
 
-==== `elasticSearch.countHitsMethodName`
-
-Change the name of countHits method in domain class. By default it's `countHits`. 
-
-For example
-
-[source, groovy]
-----
-MyDomain.countHits("${params.query}")
-
-----
-
-[TIP]
-====
-In order to change the method name to `esCountHits` just update the `elasticSearch.countHitsMethodName='esCountHits'` in application.groovy
-====
-
-
-
 ==== `elasticSearch.disableDynamicMethodsInjection`
 
 To complete disabled injection of dynamic methods set `elasticSearch.disableDynamicMethodsInjection = true` in `applicaiton.groovy` 
 
 
 === Others properties
-
-==== `elasticSearch.datastoreImpl`
-
-Only required when enabling the auto-index feature.
-This property specifies which GORM datastore implementation should be watched for storage events.
-The value should be the name of the datastore bean as it is configured in the Spring context; some possible values:
-
-.Possible Values for datastoreImpl
-[width="100%",cols="2",options="header"]
-|===
-| Value | Description
-
-| mongoDatastore
-| The name of the MongoDB datastore bean.
-
-| hibernateDatastore
-| The name of the Hibernate datastore bean.
-
-|===
-
 
 ==== `elasticSearch.bootstrap.config.file`
 
@@ -269,10 +230,36 @@ List of domain class properties to automatically ignore (will not be indexed) if
 This will apply to both the default-mapped domain class, with the static `searchable` property set to "true", and when using closure mapping.
 To override this setting on a specific class, it can be added to the `only` property of the `searchable` closure.
 
-==== `elasticSearch.disableAutoIndex`
+==== `elasticSearch.autoIndex`
 
-A boolean determining if the plugin should reflect any database save/update/delete automatically on the indices.
-Default to `false`.
+A string determining if the plugin should reflect any database save/update/delete automatically on the indices.
+Posible values are:
+
+.Possible Values for datastoreImpl
+[width="100%",cols="2",options="header"]
+|===
+| Value | Description
+
+| async
+| This will make use of Grails https://docs.grails.org/latest/guide/async.html[event model (based on Reactor)]. They will _eventually_ trigger a new index/delete operation outside the existing session.
+
+| hibernateDatastore
+| This will make use of the Hibernate datastore bean to set up http://gorm.grails.org/6.0.x/hibernate/manual/index.html#_custom_event_listeners[GORM's custom Event Listeners]. These will reuse the existing thread and datastore session, being synchronous.
+
+| mongoDatastore
+| This will make use of the mongo datastore bean to set up http://gorm.grails.org/6.0.x/hibernate/manual/index.html#_custom_event_listeners[GORM's custom Event Listeners]. These will reuse the existing thread and datastore session, being synchronous.
+
+| falsy values (null, false ...)
+| There will be no autoindexing
+
+|===
+
+
+The default configuration is `'async'`.
+
+Choose your implementation wisely as each has its own benefits and drawbacks:
+* The `async` implementation defers the ElasticSearch operations and is non-blocking, but it executes unaware of the existing session / transaction context and creates its own. Triggering ElasticSearch operations individually. By default, to minimise the memory footprint it attempts to use a `stateless` session for each operation if the underlying datastore supports it.
+* The datastore implementations model allows to batch ElasticSearch operations and reuses the existing thread with it's attached Session. It is more efficient when there are multiple entities being modified on the same thread, but you have to be careful not to execute blocking code on your `ElasticSearchMarshaller`s or other customizations.
 
 ==== `elasticSearch.bulkIndexOnStartup`
 
@@ -382,9 +369,9 @@ elasticSearch {
 
   /**
    * Determines if the plugin should reflect any database save/update/delete automatically
-   * on the ES instance. Default to false.
+   * on the ES instance. Default to `async`.
    */
-  disableAutoIndex = false
+  autoIndex = 'async'
 
   /**
    * Should the database be indexed at startup.
@@ -428,7 +415,7 @@ elasticSearch:
     client.hosts:
         - {host: localhost, port: 9300}
     defaultExcludedProperties: ['password']
-    disableAutoIndex: false
+    autoIndex: async
     index:
         compound_format: true
 environments:
