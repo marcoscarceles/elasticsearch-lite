@@ -4,31 +4,29 @@
 
 #### Purpose
 
-Remove domain instances from the ElasticSearch indices.
-Internally, the plugin uses the Bulk API of ElasticSearch to perform the delete requests.
+Remove domain instances from the ElasticSearch indices, triggering a single request against the ElasticSearch index.
+Depending on whether a single instance is provided or multiple ones, the request sent will be an isolated `Delete` request or a `BulkRequest` incluying all delete operations.
 
 #### Examples
 
 [source, groovy]
 ----
-// Unindex all searchable instances
-elasticSearchService.unindex()
+// Unindex one instance
+elasticSearchService.unindex(myDomainInstance)
 
-// Unindex a specific domain instance
-MyDomain md = new MyDomain(value:'that')
-md.save()
-elasticSearchService.unindex(md)
+// Unindex several domain instances
+elasticSearchService.unindex(instance1, instance2, instance3)
 
 // Unindex a collection of domain instances
-def ds = [new MyDomain(value:'that'), new MyOtherDomain(name:'this'), new MyDomain(value:'thatagain')]
+Collection ds = [new MyDomain(value:'that'), new MyOtherDomain(name:'this'), new MyDomain(value:'thatagain')]
 ds*.save()
 elasticSearchService.unindex(ds)
 
-// Unindex all instances of the specified domain class
-elasticSearchService.unindex(MyDomain)
-elasticSearchService.unindex(class:MyDomain)
-elasticSearchService.unindex(MyDomain, MyOtherDomain)
-elasticSearchService.unindex([MyDomain, MyOtherDomain])
+[NOTE]
+====
+Any domains not marked as `@Searchable` will be ignored.
+====
+
 
 ----
 
@@ -38,19 +36,21 @@ elasticSearchService.unindex([MyDomain, MyOtherDomain])
 
 [source, groovy]
 ----
-def unindex()
-def unindex(Map params)
-def unindex(Collection<Domain> domains)
-def unindex(Domain... domain)
-def unindex(Collection<Class> classes)
-def unindex(Class... class)
-
+BulkResponse unindex(Collection<Domain> domainInstances)
+BulkResponse unindex(Object ... domainInstances)
+DeleteResponse unindex(Object domainInstance)
 ----
 
 ##### Parameters
 
-* `Map` params - A map containing the `Class` (or `Collection` of `Class`) of the domain. Will unindex ALL persisted instances of the specified class(es).
 * `Collection<Domain>` domains - A `Collection` of domain instances to unindex.
 * `Domain...` domain - Same as `Collection<Domain>`, but with an ellipsis.
-* `Collection<Class>` classes - A `Collection` of `Class` of the domain to unindex. Will unindex ALL persisted instances of the specified classes.
-* `Class...` classes - Same as `Collection<Class>`, but with an ellipsis.
+* `Object` domainInstance - A single instance to unindex.
+
+##### Returned value
+
+If a single instance is provided a delete request is executed, therefore a `DeleteResponse` is returned.
+
+When multiple instances are provided (either via a `Collection` or multiple arguments) a `BulkResponse` is returned.
+
+`null` is returned if no request was sent ElasticSearch (ie. because the provided instance is not `@Searchable`)

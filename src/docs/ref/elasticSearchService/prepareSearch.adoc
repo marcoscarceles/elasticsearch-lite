@@ -1,0 +1,67 @@
+[[prepareSearch]]
+=== prepareSearch
+
+#### Purpose
+
+Sometimes we need further control on our search request for altering the sorting mechanism, limiting the number of results or deciding whether to fetch the results or not. This is specially useful when we just want to count the results of a specific query. For this use case we can compose our search request by using the `prepareSearch` API, which gives us direct access to the ElasticSearch's Java API `SearchRequestBuilder` instance.
+
+#### Examples
+
+[source, groovy]
+----
+import org.elasticsearch.action.search.SearchRequestBuilder
+import org.elasticsearch.action.search.SearchResponse
+
+import static org.elasticsearch.index.query.QueryBuilders.*
+import static org.elasticsearch.search.sort.SortOrder.DESC
+
+//Get the total amount of documents matching a given query, without getting their id's or fetching their data
+SearchRequestBuilder request = elasticSearchService.prepareSearch(MyDomain)
+SearchResponse response = request
+        .setSize(0)
+        .setQuery(QueryBuilders.matchAllQuery())
+        .get()
+response.hits.totalHits
+
+//Get a list of ids matching a query without fetching their documents, but sorted by date instead of score
+SearchRequestBuilder request = elasticSearchService.prepareSearch(MyDomain)
+
+SearchResponse response = request
+        .setFetchSource(false)
+        .setQuery(queryStringQuery('search for this'))
+        .addSort(SortBuilders.fieldSort('date').order(DESC))
+        .get()
+response.hits.hits*.id
+
+----
+
+##### Description
+
+`prepareSearch` signature:
+
+[source, groovy]
+----
+SearchRequestBuilder prepareSearch(Class domainClass)
+----
+
+##### Parameters
+
+* `Class` domainClass - The class to search for
+
+##### Returned value
+
+The `SearchRequestBuilder` to compose the search.
+
+### ElasticSearch Builders
+
+ElasticSearch provides many builders (e.g. QueryBuilders) and builder factories (ending with *Builders*, e.g. QueryBuilders).
+The factories provide methods for creating the concrete builders - e.g. QueryBuilders.matchQuery() produces a MatchQueryBuilder, which can be used to create a match query.
+
+Here is a list of builder factories:
+
+* org.elasticsearch.index.mapper.MapperBuilders
+* org.elasticsearch.index.query.QueryBuilders
+* org.elasticsearch.index.query.FilterBuilders
+* org.elasticsearch.search.sort.SortBuilders
+* org.elasticsearch.search.facet.FacetBuilders
+* org.elasticsearch.cluster.routing.RoutingBuilders

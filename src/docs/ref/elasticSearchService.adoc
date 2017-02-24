@@ -1,10 +1,21 @@
 [[elasticSearchService]]
 == ElasticSearchService
 
-include::elasticSearchService/countHits.adoc[]
-
 include::elasticSearchService/index.adoc[]
+
+include::elasticSearchService/indexAll.adoc[]
 
 include::elasticSearchService/search.adoc[]
 
+include::elasticSearchService/prepareSearch.adoc[]
+
 include::elasticSearchService/unindex.adoc[]
+
+include::elasticSearchService/unindexAll.adoc[]
+
+### Customization
+
+`ElasticSearchService` leverages on `ElasticSearchMarshaller` instances to prepare and build the index, search and delete requests. Therefore it is possible to customize the requests per domain type by overriding `ElasticSearchMarshaller` methods (`preapreIndex`, `buildIndex`, ...) or globally by extending and registering the `elasticSearchService` bean.
+
+An example of this would be if one needed to set up a parent child relationship between documents. Please refer to <<elasticSearchMarshaller, ElasticSearchMarshaller>> documentation.
+

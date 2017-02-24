@@ -1,0 +1,43 @@
+[[unindexAll]]
+=== unindexAll
+
+#### Purpose
+
+Unndex instances of the provided domain types.
+
+It will batch and execute a set of Bulk requests. Refer to the configuraton section to see the batch settings.
+
+[NOTE]
+====
+Any domains not marked as `@Searchable` will be ignored.
+====
+
+#### Examples
+
+[source, groovy]
+----
+//Index all instances of the given classes
+elasticSearchService.unindexAll(Pet)
+elasticSearchService.unindexAll(Pet, Owner)
+elasticSearchService.unindexAll([Pet, Owner])
+
+----
+
+##### Description
+
+`unindexAll` signatures:
+
+[source, groovy]
+----
+void unindex(Class ... domainClasses)
+void unindex(Collection<Class> domainClasses)
+----
+
+##### Parameters
+
+* `Collection<Domain>` domainObjects - A `Collection` of domain classes to unindex.
+* `Class...` domain - Same as `Collection<Domain>`, but with an ellipsis.
+
+##### Returned value
+
+void

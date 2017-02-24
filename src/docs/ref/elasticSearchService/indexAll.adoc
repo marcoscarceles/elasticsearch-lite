@@ -1,0 +1,43 @@
+[[indexAll]]
+=== indexAll
+
+#### Purpose
+
+Index instances of the provided domain types.
+
+It will batch and execute a set of Bulk requests. Refer to the configuraton section to see the batch settings.
+
+[NOTE]
+====
+Any domains not marked as `@Searchable` will be ignored.
+====
+
+#### Examples
+
+[source, groovy]
+----
+//Index all instances of the given classes
+elasticSearchService.indexAll(Pet)
+elasticSearchService.indexAll(Pet, Owner)
+elasticSearchService.indexAll([Pet, Owner])
+
+----
+
+##### Description
+
+`indexAll` signatures:
+
+[source, groovy]
+----
+void index(Class ... domainClasses)
+void index(Collection<Class> domainClasses)
+----
+
+##### Parameters
+
+* `Collection<Domain>` domainObjects - A `Collection` of domain classes to index.
+* `Class...` domain - Same as `Collection<Domain>`, but with an ellipsis.
+
+##### Returned value
+
+void
