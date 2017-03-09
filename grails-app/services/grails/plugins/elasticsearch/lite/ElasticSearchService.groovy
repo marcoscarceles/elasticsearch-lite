@@ -23,6 +23,7 @@ import org.grails.datastore.mapping.engine.event.PostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PostInsertEvent
 import org.grails.datastore.mapping.engine.event.PostUpdateEvent
 import org.grails.datastore.mapping.query.api.Criteria
+import org.hibernate.criterion.DetachedCriteria
 import org.springframework.beans.factory.InitializingBean
 import reactor.spring.context.annotation.Consumer
 
@@ -135,15 +136,15 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         response
     }
 
-    void indexAll(backgroundTask = bulkProcessor != null, Class ... domainClasses) {
-        indexAll(backgroundTask, domainClasses as List)
+    void indexAll(boolean backgroundTask = bulkProcessor != null, DetachedCriteria detachedCriteria = null, Class ... domainClasses) {
+        indexAll(backgroundTask, detachedCriteria, domainClasses as List)
     }
 
-    void indexAll(backgroundTask = bulkProcessor != null, List<Class> domainClasses) {
+    void indexAll(boolean backgroundTask = bulkProcessor != null, DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
             withReadAccess(domainClass) { // Do not cache domain objects in memory
                 int total = domainClass.count()
-                Criteria criteria = domainClass.createCriteria()
+                Criteria criteria = detachedCriteria ?: domainClass.createCriteria()
 
                 log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
 
@@ -252,14 +253,14 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         response
     }
 
-    void unindexAll(backgroundTask = bulkProcessor != null, Class ... domainClasses) {
-        unindexAll(backgroundTask, domainClasses as List)
+    void unindexAll(boolean backgroundTask = bulkProcessor != null, DetachedCriteria detachedCriteria = null, Class ... domainClasses) {
+        unindexAll(backgroundTask, detachedCriteria, domainClasses as List)
     }
 
-    void unindexAll(backgroundTask = bulkProcessor != null, List<Class> domainClasses) {
+    void unindexAll(boolean backgroundTask = bulkProcessor != null, DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
             int total = domainClass.count()
-            Criteria criteria = domainClass.createCriteria()
+            Criteria criteria = detachedCriteria ?: domainClass.createCriteria()
 
             log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
 

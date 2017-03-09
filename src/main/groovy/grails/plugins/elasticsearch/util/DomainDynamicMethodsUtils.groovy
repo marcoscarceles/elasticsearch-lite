@@ -22,6 +22,7 @@ import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.util.logging.Slf4j
 import org.apache.commons.lang.WordUtils
 import org.elasticsearch.index.query.QueryBuilder
+import org.hibernate.criterion.DetachedCriteria
 
 /**
  * Created by marcoscarceles on 13/02/2017.
@@ -73,6 +74,12 @@ class DomainDynamicMethodsUtils {
             }
             domain.metaClass.'static'.indexAll << { boolean backgroundTask ->
                 elasticSearchService.indexAll(backgroundTask, delegate)
+            }
+            domain.metaClass.'static'.indexAll << { DetachedCriteria detachedCriteria ->
+                elasticSearchService.indexAll(detachedCriteria, delegate)
+            }
+            domain.metaClass.'static'.indexAll << { boolean backgroundTask, DetachedCriteria detachedCriteria ->
+                elasticSearchService.indexAll(backgroundTask, detachedCriteria, delegate)
             }
 
             // unindex() method on domain instance
