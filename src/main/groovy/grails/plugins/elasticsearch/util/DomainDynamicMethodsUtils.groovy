@@ -63,15 +63,24 @@ class DomainDynamicMethodsUtils {
             domain.metaClass.index << {
                 elasticSearchService.index(delegate)
             }
+            domain.metaClass.index << { boolean backgroundTask ->
+                elasticSearchService.index(backgroundTask, delegate)
+            }
 
-            // index() method on domain instance
+            // indexAll() method on domain class
             domain.metaClass.'static'.indexAll << {
                 elasticSearchService.indexAll(delegate)
+            }
+            domain.metaClass.'static'.indexAll << { boolean backgroundTask ->
+                elasticSearchService.indexAll(backgroundTask, delegate)
             }
 
             // unindex() method on domain instance
             domain.metaClass.unindex << {
                 elasticSearchService.unindex(delegate)
+            }
+            domain.metaClass.unindex << { boolean backgroundTask ->
+                elasticSearchService.unindex(backgroundTask, delegate)
             }
         }
     }

@@ -7,6 +7,7 @@ import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.lite.mapping.Mapping
 import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.transform.CompileStatic
+import org.elasticsearch.action.bulk.BulkProcessor
 import org.elasticsearch.client.Client
 import org.grails.core.artefact.DomainClassArtefactHandler
 
@@ -20,6 +21,7 @@ class ElasticSearchLiteContext {
 
     GrailsApplication grailsApplication
     Client client
+    BulkProcessor bulkProcessor
     boolean autoIndexingEnabled = true
     boolean initialIndexCompleted = false
 

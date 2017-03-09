@@ -1,11 +1,14 @@
 package grails.plugins.elasticsearch.lite
 
 import grails.core.GrailsApplication
+import grails.plugins.elasticsearch.lite.bulk.DefaultBulkProcessorListener
 import grails.plugins.elasticsearch.mapping.MappingMigrationStrategy
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
 import grails.plugins.elasticsearch.util.IndexNamingUtils
 import groovy.util.logging.Slf4j
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest
+import org.elasticsearch.action.bulk.BackoffPolicy
+import org.elasticsearch.action.bulk.BulkProcessor
 import org.elasticsearch.client.Client
 import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.cluster.health.ClusterHealthStatus
@@ -39,7 +42,26 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
 
     void setup() {
         elasticSearchLiteContext.client = buildClient()
+        if(esConfig.useBulkProcessor) {
+            elasticSearchLiteContext.bulkProcessor = buildBulkProcessor(elasticSearchLiteContext.client)
+        }
         initializeIndices()
+    }
+
+    /**
+     * Creates a BulkProcessor for executing Elasticsearch requests on the background.
+     * The settings of the processor can be tuned by config.
+     * For further customization (ie. setting hooks on the requests) override this method.
+     * @return
+     */
+    BulkProcessor buildBulkProcessor(Client client) {
+        BulkProcessor.builder(client, new DefaultBulkProcessorListener())
+                .setBackoffPolicy(BackoffPolicy.exponentialBackoff())
+                .setBulkActions(bulkBatchSize)
+                .setBulkSize(bulkMemorySize)
+                .setConcurrentRequests(concurrentRequests)
+                .setFlushInterval(bulkInterval)
+                .build()
     }
 
     void initializeIndices(Class ... domainClasses) {

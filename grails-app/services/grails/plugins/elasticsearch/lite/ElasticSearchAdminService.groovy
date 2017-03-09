@@ -31,6 +31,7 @@ class ElasticSearchAdminService {
     }
 
     RefreshResponse refresh(Class ... domainClasses) {
+        elasticSearchService.flush()
         if(!domainClasses) {
             return adminClient.indices().prepareRefresh().get()
         } else {

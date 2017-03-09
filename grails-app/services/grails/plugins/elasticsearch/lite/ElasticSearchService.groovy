@@ -4,10 +4,13 @@ import grails.core.GrailsApplication
 import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
 import groovy.util.logging.Slf4j
+import org.elasticsearch.action.bulk.BulkProcessor
 import org.elasticsearch.action.bulk.BulkRequestBuilder
 import org.elasticsearch.action.bulk.BulkResponse
+import org.elasticsearch.action.delete.DeleteRequest
 import org.elasticsearch.action.delete.DeleteRequestBuilder
 import org.elasticsearch.action.delete.DeleteResponse
+import org.elasticsearch.action.index.IndexRequest
 import org.elasticsearch.action.index.IndexRequestBuilder
 import org.elasticsearch.action.index.IndexResponse
 import org.elasticsearch.action.search.SearchRequestBuilder
@@ -52,6 +55,10 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         elasticSearchLiteContext.client
     }
 
+    private BulkProcessor getBulkProcessor() {
+        elasticSearchLiteContext.bulkProcessor
+    }
+
     void onUpsert(AbstractPersistenceEvent event) {
         if(elasticSearchLiteContext.autoIndexingEnabled) {
             withReadAccess(event.entityObject.class) {
@@ -72,23 +79,47 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         Class domainClass = domainObject.class
         IndexRequestBuilder request
         if(elasticSearchLiteContext.isSearchable(domainClass)) {
-            log.debug("Building ElasticSearch request for instance of ${domainObject.class} with id ${domainObject.id}")
+            log.debug("Building ElasticSearch index request for instance of ${domainObject.class} with id ${domainObject.id}")
             ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
             ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
             request = marshaller.buildIndex(client, esType, domainObject)
         } else {
-            log.warn("Attempted to build index request for non @Searchable class ${domainClass}.")
+            log.debug("Attempted to build index request for non @Searchable class ${domainClass}.")
         }
         request
     }
 
-    IndexResponse index(Object domainObject) {
+    DeleteRequestBuilder buildDelete(Object domainObject) {
+        Class domainClass = domainObject.class
+        DeleteRequestBuilder request
+        if(elasticSearchLiteContext.isSearchable(domainClass)) {
+            log.debug("Building ElasticSearch delete request for instance of ${domainObject.class} with id ${domainObject.id}")
+            ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
+            ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
+            request = marshaller.buildDelete(client, esType, domainObject)
+        } else {
+            log.debug("Attempted to build delete request for non @Searchable class ${domainClass}.")
+        }
+        request
+    }
+
+    /**
+     * Indexes a single domain object
+     * @param backgroundTask - Whether to delegate on bulkProcessor to execute the index in the background on execute the request immediately
+     * @param domainObject - The domain object to index
+     * @return the IndexResponse if the object was @Searchabled and the request was sent synchronously or null otherwise
+     */
+    IndexResponse index(boolean backgroundTask = bulkProcessor != null, Object domainObject) {
         IndexRequestBuilder request = buildIndex(domainObject)
         IndexResponse response
         if(request) {
             try {
                 log.debug("Indexing instance of ${domainObject.class} with id ${domainObject.id} into ElasticSearch")
-                response = request.get()
+                if(backgroundTask && bulkProcessor) {
+                    bulkProcessor.add(request.request())
+                } else {
+                    response = request.get()
+                }
             } catch (Exception e) {
                 log.error("Unable to index instance of ${domainObject.class} with id ${domainObject.id} due to Exception", e)
             }
@@ -96,35 +127,36 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         response
     }
 
-    void indexAll(Class ... domainClasses) {
-        indexAll(domainClasses as List)
+    void indexAll(backgroundTask = bulkProcessor != null, Class ... domainClasses) {
+        indexAll(backgroundTask, domainClasses as List)
     }
 
-    void indexAll(List<Class> domainClasses) {
+    void indexAll(backgroundTask = bulkProcessor != null, List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
             withReadAccess(domainClass) { // Do not cache domain objects in memory
                 int total = domainClass.count()
-                int batchSize = esConfig.bulkBatchSize ?: 500
-                int interval = esConfig.bulkInterval ?: 100
                 Criteria criteria = domainClass.createCriteria()
 
                 log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
 
-                0.step(total, batchSize) { offset ->
-                    log.info("Indexing ${offset} to ${offset+batchSize}")
-                    List instances = criteria.list(offset:offset, max:batchSize) {
+                0.step(total, bulkBatchSize) { offset ->
+                    log.info("Indexing ${offset} to ${offset+bulkBatchSize}")
+                    List instances = criteria.list(offset:offset, max: bulkBatchSize) {
                         order("id", "desc")
                     }
                     index(instances)
-                    sleep(interval)
+
+                    if(!backgroundTask || !bulkProcessor) { //Otherwise let the BulkProcessor take care of the batching
+                        sleep(bulkInterval.millis)
+                    }
                 }
                 log.debug("Bulk index of domain class ${domainClass} with ${total} completed")
             }
         }
     }
 
-    BulkResponse index(Object ... domainObjects) {
-        index(domainObjects as List)
+    BulkResponse index(boolean backgroundTask = bulkProcessor != null, Object ... domainObjects) {
+        index(backgroundTask, domainObjects as List)
     }
 
     BulkRequestBuilder buildBulkIndex(BulkRequestBuilder bulkRequest = client.prepareBulk(), Collection domainObjects) {
@@ -143,11 +175,27 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         bulkRequest
     }
 
-    BulkResponse index(Collection domainObjects) {
+    /**
+     * Index a set of domain objects
+     * @param backgroundTask - Whether to use bulkProcessor to perform the index in the background.
+     * @param domainObjects
+     * @return a BulkResponse if the request was executed synchronously (ie. no BulkProcessor is used) and at least one
+     * instance was indexed, or null if BulkProcessor is used or none of the instances provided were @Searchable.
+     */
+    BulkResponse index(boolean backgroundTask = bulkProcessor != null, Collection domainObjects) {
         BulkResponse response
-        BulkRequestBuilder request = buildBulkIndex(domainObjects)
-        if(request?.numberOfActions()) {
-            response = request.get()
+        if(backgroundTask && bulkProcessor) {
+            domainObjects.each { domainObject ->
+                IndexRequest request = buildIndex(domainObject)?.request()
+                if(request) {
+                    bulkProcessor.add(request)
+                }
+            }
+        } else {
+            BulkRequestBuilder request = buildBulkIndex(domainObjects)
+            if(request?.numberOfActions()) {
+                response = request.get()
+            }
         }
         response
     }
@@ -168,77 +216,97 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         response
     }
 
-    DeleteResponse unindex(Object domainObject) {
-        Class domainClass = domainObject.class
+    /**
+     * Unindexes a single domain object
+     * @param backgroundTask - Whether to delegate on bulkProcessor to execute the index in the background on execute the request immediately
+     * @param domainObject - The domain object to unindex
+     * @return the DeleteResponse if the object was @Searchabled and the request was sent synchronously or null otherwise
+     */
+    DeleteResponse unindex(boolean backgroundTask = bulkProcessor != null, Object domainObject) {
+        DeleteRequestBuilder request = buildDelete(domainObject)
         DeleteResponse response
-        if(elasticSearchLiteContext.isSearchable(domainClass)) {
-            log.debug("Deleting instance of ${domainClass} with id ${domainObject.id} from ElasticSearch")
+        if(request) {
             try {
-                ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
-                ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
-                response = marshaller.buildDelete(client, esType, domainObject).get()
+                log.debug("Unindexing instance of ${domainObject.class} with id ${domainObject.id} into ElasticSearch")
+                if(backgroundTask && bulkProcessor) {
+                    bulkProcessor.add(request.request())
+                } else {
+                    response = request.get()
+                }
             } catch (Exception e) {
-                log.info("Unable to delete instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
+                log.error("Unable to unindex instance of ${domainObject.class} with id ${domainObject.id} due to Exception", e)
             }
         }
         response
     }
 
-    void unindexAll(Class ... domainClasses) {
-        unindexAll(domainClasses as List)
+    void unindexAll(backgroundTask = bulkProcessor != null, Class ... domainClasses) {
+        unindexAll(backgroundTask, domainClasses as List)
     }
 
-    void unindexAll(List<Class> domainClasses) {
+    void unindexAll(backgroundTask = bulkProcessor != null, List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
             int total = domainClass.count()
-            int batchSize = esConfig.bulkBatchSize ?: 500
-            int interval = esConfig.bulkInterval ?: 100
             Criteria criteria = domainClass.createCriteria()
 
             log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
 
             0.step(total, batchSize) { offset ->
-                log.info("Indexing ${offset} to ${offset+batchSize}")
-                List instances = criteria.list(offset:offset, max:batchSize) {
+                log.info("Indexing ${offset} to ${offset+bulkBatchSize}")
+                List instances = criteria.list(offset:offset, max:bulkBatchSize) {
                     order("id", "desc")
                 }
                 unindex(instances)
-                sleep(interval)
+
+                if(!backgroundTask || !bulkProcessor) { //Otherwise let the BulkProcessor take care of the batching
+                    sleep(bulkInterval)
+                }
             }
             log.debug("Bulk index of domain class ${domainClass} with ${total} completed")
         }
     }
 
-    BulkResponse unindex(Object ... domainObjects) {
-        unindex(domainObjects as List)
+    BulkResponse unindex(boolean backgroundTask = bulkProcessor != null, Object ... domainObjects) {
+        unindex(backgroundTask, domainObjects as List)
     }
 
     BulkRequestBuilder buildBulkUnindex(bulkRequest = client.prepareBulk(), Collection domainObjects) {
         domainObjects.each { domainObject ->
-            Class domainClass = domainObject.class
-            if(elasticSearchLiteContext.isSearchable(domainClass)) {
-                log.debug("Deleting instance of ${domainClass} with id ${domainObject.id} from ElasticSearch")
+            DeleteRequestBuilder request = buildDelete(domainObject)
+            if(request) {
                 try {
-                    ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
-                    ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
-                    bulkRequest.add(marshaller.buildDelete(client, esType, domainObject))
+                    bulkRequest.add(request)
                 } catch (Exception e) {
-                    log.error("Unable to delete instance of ${domainClass} with id ${domainObject.id} due to Exception", e)
+                    log.error("Unable to delete instance of ${domainObject.class} with id ${domainObject.id} due to Exception", e)
                 }
             }
         }
         bulkRequest
     }
 
-    BulkResponse unindex(Collection domainObjects) {
+    /**
+     * Unindex a set of domain objects
+     * @param domainObjects
+     * @return a BulkResponse if the request was executed synchronously (ie. no BulkProcessor is used) and at least one
+     * instance was indexed, or null if BulkProcessor is used or none of the instances provided were @Searchable
+     */
+    BulkResponse unindex(boolean backgroundTask = bulkProcessor != null, Collection domainObjects) {
         BulkResponse response
-        BulkRequestBuilder request = buildBulkUnindex(domainObjects)
-        if(request?.numberOfActions()) {
-            response = request.get()
+        if(backgroundTask && bulkProcessor) {
+            domainObjects.each { domainObject ->
+                DeleteRequest request = buildDelete(domainObject)?.request()
+                if(request) {
+                    bulkProcessor.add(request)
+                }
+            }
+        } else {
+            BulkRequestBuilder request = buildBulkUnindex(domainObjects)
+            if(request?.numberOfActions()) {
+                response = request.get()
+            }
         }
         response
     }
-
 
     IndexRequestBuilder prepareIndex(Class domain) {
         ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domain)
@@ -273,5 +341,18 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         } catch(UnsupportedOperationException e) {
             domainClass.withSession(closure)
         }
+    }
+
+    /**
+     * If bulkProcessor is being used, flush all requests
+     * @return true if bulkProcessor flush was performed
+     */
+    boolean flush() {
+        boolean didFlush = false
+        if(bulkProcessor) {
+            bulkProcessor.flush()
+            didFlush = true
+        }
+        return didFlush
     }
 }
