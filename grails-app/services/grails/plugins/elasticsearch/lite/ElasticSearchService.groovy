@@ -76,29 +76,37 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
     }
 
     IndexRequestBuilder buildIndex(Object domainObject) {
-        Class domainClass = domainObject.class
         IndexRequestBuilder request
-        if(elasticSearchLiteContext.isSearchable(domainClass)) {
-            log.debug("Building ElasticSearch index request for instance of ${domainObject.class} with id ${domainObject.id}")
-            ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
-            ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
-            request = marshaller.buildIndex(client, esType, domainObject)
-        } else {
-            log.debug("Attempted to build index request for non @Searchable class ${domainClass}.")
+        try {
+            Class domainClass = domainObject.getClass()
+            if(elasticSearchLiteContext.isSearchable(domainClass)) {
+                log.debug("Building ElasticSearch index request for instance of ${domainObject.getClass()} with id ${domainObject.id}")
+                ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
+                ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
+                request = marshaller.buildIndex(client, esType, domainObject)
+            } else {
+                log.debug("Attempted to build index request for non @Searchable class ${domainClass}.")
+            }
+        } catch (Exception e) {
+            log.error("Unable to build index request for instance of ${domainObject?.getClass()} due to Exception", e)
         }
         request
     }
 
     DeleteRequestBuilder buildDelete(Object domainObject) {
-        Class domainClass = domainObject.class
         DeleteRequestBuilder request
-        if(elasticSearchLiteContext.isSearchable(domainClass)) {
-            log.debug("Building ElasticSearch delete request for instance of ${domainObject.class} with id ${domainObject.id}")
-            ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
-            ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
-            request = marshaller.buildDelete(client, esType, domainObject)
-        } else {
-            log.debug("Attempted to build delete request for non @Searchable class ${domainClass}.")
+        try {
+            Class domainClass = domainObject.getClass()
+            if (elasticSearchLiteContext.isSearchable(domainClass)) {
+                log.debug("Building ElasticSearch delete request for instance of ${domainObject.getClass()} with id ${domainObject.id}")
+                ElasticSearchMarshaller marshaller = elasticSearchLiteContext.getMarshaller(domainClass)
+                ElasticSearchType esType = elasticSearchLiteContext.getType(domainClass)
+                request = marshaller.buildDelete(client, esType, domainObject)
+            } else {
+                log.debug("Attempted to build delete request for non @Searchable class ${domainClass}.")
+            }
+        } catch (Exception e) {
+            log.error("Unable to build delete request for instance of ${domainObject?.getClass()} due to Exception", e)
         }
         request
     }
@@ -110,19 +118,19 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
      * @return the IndexResponse if the object was @Searchabled and the request was sent synchronously or null otherwise
      */
     IndexResponse index(boolean backgroundTask = bulkProcessor != null, Object domainObject) {
-        IndexRequestBuilder request = buildIndex(domainObject)
         IndexResponse response
-        if(request) {
-            try {
-                log.debug("Indexing instance of ${domainObject.class} with id ${domainObject.id} into ElasticSearch")
-                if(backgroundTask && bulkProcessor) {
-                    bulkProcessor.add(request.request())
-                } else {
-                    response = request.get()
-                }
-            } catch (Exception e) {
-                log.error("Unable to index instance of ${domainObject.class} with id ${domainObject.id} due to Exception", e)
+        try {
+            IndexRequestBuilder request = buildIndex(domainObject)
+            if(request) {
+                    log.debug("Indexing instance of ${domainObject.getClass()} with id ${domainObject.id} into ElasticSearch")
+                    if(backgroundTask && bulkProcessor) {
+                        bulkProcessor.add(request.request())
+                    } else {
+                        response = request.get()
+                    }
             }
+        } catch (Exception e) {
+            log.error("Unable to index instance of ${domainObject.getClass()} with id ${domainObject.id} due to Exception", e)
         }
         response
     }
@@ -162,13 +170,13 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
     BulkRequestBuilder buildBulkIndex(BulkRequestBuilder bulkRequest = client.prepareBulk(), Collection domainObjects) {
 
         domainObjects.each { domainObject ->
-            IndexRequestBuilder request = buildIndex(domainObject)
-            if(request) {
-                try {
+            try {
+                IndexRequestBuilder request = buildIndex(domainObject)
+                if(request) {
                     bulkRequest.add(request)
-                } catch (Exception e) {
-                    log.error("Unable to index instance of ${domainObject.class} with id ${domainObject.id} due to Exception", e)
                 }
+            } catch (Exception e) {
+                log.error("Unable to index instance of ${domainObject.getClass()} with id ${domainObject.id} due to Exception", e)
             }
         }
 
@@ -186,9 +194,13 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         BulkResponse response
         if(backgroundTask && bulkProcessor) {
             domainObjects.each { domainObject ->
-                IndexRequest request = buildIndex(domainObject)?.request()
-                if(request) {
-                    bulkProcessor.add(request)
+                try{
+                    IndexRequest request = buildIndex(domainObject)?.request()
+                    if(request) {
+                        bulkProcessor.add(request)
+                    }
+                } catch (Exception e) {
+                    log.error("Unable to index instance of ${domainObject.getClass()} with id ${domainObject.id} due to Exception", e)
                 }
             }
         } else {
@@ -223,19 +235,19 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
      * @return the DeleteResponse if the object was @Searchabled and the request was sent synchronously or null otherwise
      */
     DeleteResponse unindex(boolean backgroundTask = bulkProcessor != null, Object domainObject) {
-        DeleteRequestBuilder request = buildDelete(domainObject)
         DeleteResponse response
-        if(request) {
-            try {
-                log.debug("Unindexing instance of ${domainObject.class} with id ${domainObject.id} into ElasticSearch")
+        try {
+            DeleteRequestBuilder request = buildDelete(domainObject)
+            if(request) {
+                log.debug("Unindexing instance of ${domainObject.getClass()} with id ${domainObject.id} into ElasticSearch")
                 if(backgroundTask && bulkProcessor) {
                     bulkProcessor.add(request.request())
                 } else {
                     response = request.get()
                 }
-            } catch (Exception e) {
-                log.error("Unable to unindex instance of ${domainObject.class} with id ${domainObject.id} due to Exception", e)
             }
+        } catch (Exception e) {
+            log.error("Unable to unindex instance of ${domainObject.getClass()} with id ${domainObject.id} due to Exception", e)
         }
         response
     }
@@ -272,13 +284,13 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
 
     BulkRequestBuilder buildBulkUnindex(bulkRequest = client.prepareBulk(), Collection domainObjects) {
         domainObjects.each { domainObject ->
-            DeleteRequestBuilder request = buildDelete(domainObject)
-            if(request) {
-                try {
+            try {
+                DeleteRequestBuilder request = buildDelete(domainObject)
+                if(request) {
                     bulkRequest.add(request)
-                } catch (Exception e) {
-                    log.error("Unable to delete instance of ${domainObject.class} with id ${domainObject.id} due to Exception", e)
                 }
+            } catch(Exception e) {
+                log.error("Unable to delete instance of ${domainObject.getClass()} with id ${domainObject.id} due to Exception", e)
             }
         }
         bulkRequest
@@ -294,9 +306,13 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         BulkResponse response
         if(backgroundTask && bulkProcessor) {
             domainObjects.each { domainObject ->
-                DeleteRequest request = buildDelete(domainObject)?.request()
-                if(request) {
-                    bulkProcessor.add(request)
+                try {
+                    DeleteRequest request = buildDelete(domainObject)?.request()
+                    if(request) {
+                        bulkProcessor.add(request)
+                    }
+                } catch(Exception e) {
+                    log.error("Unable to delete instance of ${domainObject.getClass()} with id ${domainObject.id} due to Exception", e)
                 }
             }
         } else {
@@ -329,7 +345,7 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
     MoreLikeThisQueryBuilder.Item moreLike(Object domainObject) {
         MoreLikeThisQueryBuilder.Item item
         if(elasticSearchLiteContext.isSearchable(domainObject?.class)) {
-            ElasticSearchType esType = elasticSearchLiteContext.getType(domainObject.class)
+            ElasticSearchType esType = elasticSearchLiteContext.getType(domainObject.getClass())
             item = new MoreLikeThisQueryBuilder.Item(esType.queryingIndex, esType.type, domainObject.id as String)
         }
         return item
