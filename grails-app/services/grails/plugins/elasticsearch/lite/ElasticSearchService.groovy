@@ -1,6 +1,7 @@
 package grails.plugins.elasticsearch.lite
 
 import grails.core.GrailsApplication
+import grails.gorm.DetachedCriteria
 import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.util.ElasticSearchConfigAware
 import groovy.util.logging.Slf4j
@@ -23,7 +24,6 @@ import org.grails.datastore.mapping.engine.event.PostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PostInsertEvent
 import org.grails.datastore.mapping.engine.event.PostUpdateEvent
 import org.grails.datastore.mapping.query.api.Criteria
-import org.hibernate.criterion.DetachedCriteria
 import org.springframework.beans.factory.InitializingBean
 import reactor.spring.context.annotation.Consumer
 
@@ -136,11 +136,19 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         response
     }
 
-    void indexAll(boolean backgroundTask = bulkProcessor != null, DetachedCriteria detachedCriteria = null, Class ... domainClasses) {
+    void indexAll(DetachedCriteria detachedCriteria = null, Class ... domainClasses) {
+        indexAll(bulkProcessor != null, detachedCriteria, domainClasses as List)
+    }
+
+    void indexAll(boolean backgroundTask, DetachedCriteria detachedCriteria = null, Class ... domainClasses) {
         indexAll(backgroundTask, detachedCriteria, domainClasses as List)
     }
 
-    void indexAll(boolean backgroundTask = bulkProcessor != null, DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
+    void indexAll(DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
+        indexAll(bulkProcessor != null, detachedCriteria, domainClasses)
+    }
+
+    void indexAll(boolean backgroundTask, DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
             withReadAccess(domainClass) { // Do not cache domain objects in memory
                 int total = domainClass.count()
@@ -253,11 +261,19 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
         response
     }
 
-    void unindexAll(boolean backgroundTask = bulkProcessor != null, DetachedCriteria detachedCriteria = null, Class ... domainClasses) {
+    void unindexAll(DetachedCriteria detachedCriteria = null, Class ... domainClasses) {
+        unindexAll(bulkProcessor != null, detachedCriteria, domainClasses as List)
+    }
+
+    void unindexAll(boolean backgroundTask, DetachedCriteria detachedCriteria = null, Class ... domainClasses) {
         unindexAll(backgroundTask, detachedCriteria, domainClasses as List)
     }
 
-    void unindexAll(boolean backgroundTask = bulkProcessor != null, DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
+    void unindexAll(DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
+        unindexAll(bulkProcessor != null, detachedCriteria, domainClasses as List)
+    }
+
+    void unindexAll(boolean backgroundTask, DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
             int total = domainClass.count()
             Criteria criteria = detachedCriteria ?: domainClass.createCriteria()

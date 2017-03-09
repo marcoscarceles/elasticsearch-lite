@@ -16,13 +16,13 @@
 package grails.plugins.elasticsearch.util
 
 import grails.core.GrailsDomainClass
+import grails.gorm.DetachedCriteria
 import grails.plugins.elasticsearch.lite.ElasticSearchLiteContext
 import grails.plugins.elasticsearch.lite.ElasticSearchService
 import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.util.logging.Slf4j
 import org.apache.commons.lang.WordUtils
 import org.elasticsearch.index.query.QueryBuilder
-import org.hibernate.criterion.DetachedCriteria
 
 /**
  * Created by marcoscarceles on 13/02/2017.
@@ -70,16 +70,16 @@ class DomainDynamicMethodsUtils {
 
             // indexAll() method on domain class
             domain.metaClass.'static'.indexAll << {
-                elasticSearchService.indexAll(delegate)
+                elasticSearchService.indexAll([delegate])
             }
             domain.metaClass.'static'.indexAll << { boolean backgroundTask ->
-                elasticSearchService.indexAll(backgroundTask, delegate)
+                elasticSearchService.indexAll(backgroundTask, [delegate])
             }
             domain.metaClass.'static'.indexAll << { DetachedCriteria detachedCriteria ->
-                elasticSearchService.indexAll(detachedCriteria, delegate)
+                elasticSearchService.indexAll(detachedCriteria, [delegate])
             }
             domain.metaClass.'static'.indexAll << { boolean backgroundTask, DetachedCriteria detachedCriteria ->
-                elasticSearchService.indexAll(backgroundTask, detachedCriteria, delegate)
+                elasticSearchService.indexAll(backgroundTask, detachedCriteria, [delegate])
             }
 
             // unindex() method on domain instance
@@ -88,6 +88,20 @@ class DomainDynamicMethodsUtils {
             }
             domain.metaClass.unindex << { boolean backgroundTask ->
                 elasticSearchService.unindex(backgroundTask, delegate)
+            }
+
+            // unindexAll() method on domain class
+            domain.metaClass.'static'.unindexAll << {
+                elasticSearchService.unindexAll([delegate])
+            }
+            domain.metaClass.'static'.unindexAll << { boolean backgroundTask ->
+                elasticSearchService.unindexAll(backgroundTask, [delegate])
+            }
+            domain.metaClass.'static'.unindexAll << { DetachedCriteria detachedCriteria ->
+                elasticSearchService.unindexAll(detachedCriteria, [delegate])
+            }
+            domain.metaClass.'static'.unindexAll << { boolean backgroundTask, DetachedCriteria detachedCriteria ->
+                elasticSearchService.unindexAll(backgroundTask, detachedCriteria, [delegate])
             }
         }
     }
