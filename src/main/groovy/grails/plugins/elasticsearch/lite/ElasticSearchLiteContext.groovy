@@ -35,11 +35,14 @@ class ElasticSearchLiteContext {
 
     @PostConstruct
     Map<Class, ElasticSearchMarshaller<?>> init() {
+        List<Class> domainClasses = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)*.clazz
+        init(domainClasses)
+    }
+
+    Map<Class, ElasticSearchMarshaller<?>> init(List<Class> domainClasses) {
         ELASTIC_TYPES = [:]
         MARSHALLERS = [:]
-        for (GrailsClass grailsClazz : grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)) {
-            GrailsDomainClass domainClass = (GrailsDomainClass) grailsClazz
-            Class clazz = domainClass.clazz
+        for (Class clazz : domainClasses) {
             if(clazz.isAnnotationPresent(Mapping)) {
                 Mapping mapping = clazz.getAnnotation(Mapping)
                 MARSHALLERS.put(clazz, mapping.value().newInstance())
