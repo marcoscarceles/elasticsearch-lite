@@ -13,9 +13,6 @@ class GeoPoint {
     Double lat
     Double lon
 
-    static searchable = {
-        root false
-    }
 }
 
 class GeoPointMarshaller implements ElasticSearchMarshaller<GeoPoint> {

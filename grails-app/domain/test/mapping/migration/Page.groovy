@@ -11,8 +11,4 @@ class Page {
     static constraints = {
     }
 
-    static searchable = {
-        root false
-        products component: true
-    }
 }

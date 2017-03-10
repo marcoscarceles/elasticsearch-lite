@@ -68,7 +68,7 @@ class ElasticSearchAdminService {
 
     /**
      * Delete one or more index and all its data.
-     * @param indices The indices to delete in the form of searchable class(es).
+     * @param indices The indices to delete in the form of @Searchable class(es).
      */
     void deleteIndex(Class... searchableClasses) {
         def toDelete = []
@@ -81,7 +81,7 @@ class ElasticSearchAdminService {
             }
         }
         // We do not trigger the deleteIndex with an empty list as it would delete ALL indices.
-        // If toDelete is empty, it might be because of a misuse of a Class the user thought to be a searchable class
+        // If toDelete is empty, it might be because of a misuse of a Class the user thought to be a @Searchable class
         if (!toDelete.isEmpty()) {
             deleteIndex(toDelete.unique())
         }

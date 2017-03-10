@@ -14,16 +14,6 @@ elasticSearch {
     ]
 
     /**
-     * Default mapping property exclusions
-     *
-     * No properties matching the given names will be mapped by default
-     * ie, when using "searchable = true"
-     *
-     * This does not apply for classes using mapping by closure
-     */
-    defaultExcludedProperties = ['password']
-
-    /**
      * Determines if the plugin should reflect any database save/update/delete automatically
      * on the ES instance. Default to false.
      */

@@ -33,7 +33,7 @@ class DomainDynamicMethodsUtils {
     ElasticSearchLiteContext elasticSearchLiteContext
 
     /**
-     * Injects the dynamic methods in the searchable domain classes.
+     * Injects the dynamic methods in the @Searchable domain classes.
      * Considers that the mapping has been resolved beforehand.
      *
      * @param grailsApplication

@@ -18,11 +18,6 @@ class Spaceship {
     Person captain
     String shipData
 
-    static searchable = {
-        captain component: 'inner'
-        shipData dynamic: true
-    }
-
     static mapping = {
         shipData type: 'text', column: 'data'
     }
