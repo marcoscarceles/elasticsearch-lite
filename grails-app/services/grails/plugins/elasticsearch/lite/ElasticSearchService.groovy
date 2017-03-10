@@ -280,7 +280,7 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
 
             log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
 
-            0.step(total, batchSize) { offset ->
+            0.step(total, bulkBatchSize) { offset ->
                 log.info("Indexing ${offset} to ${offset+bulkBatchSize}")
                 List instances = criteria.list(offset:offset, max:bulkBatchSize) {
                     order("id", "desc")
