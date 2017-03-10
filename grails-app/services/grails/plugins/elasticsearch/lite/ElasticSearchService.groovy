@@ -151,8 +151,8 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
     void indexAll(boolean backgroundTask, DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
             withReadAccess(domainClass) { // Do not cache domain objects in memory
-                int total = domainClass.count()
                 Criteria criteria = detachedCriteria ?: domainClass.createCriteria()
+                int total = criteria.count()
 
                 log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
 
@@ -275,8 +275,8 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
 
     void unindexAll(boolean backgroundTask, DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
-            int total = domainClass.count()
             Criteria criteria = detachedCriteria ?: domainClass.createCriteria()
+            int total = criteria.count()
 
             log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
 
