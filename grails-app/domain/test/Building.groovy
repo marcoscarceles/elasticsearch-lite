@@ -28,7 +28,7 @@ class BuildingMarshaller implements ElasticSearchMarshaller<Building> {
         building {
             "properties" {
                 "name"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }

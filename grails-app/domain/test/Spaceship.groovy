@@ -42,13 +42,13 @@ class SpaceshipMarshaller implements ElasticSearchMarshaller<Spaceship> {
         spaceship {
             "properties" {
                 "name"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
                 "captain"(captainMapping.content)
                 "shipData"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }

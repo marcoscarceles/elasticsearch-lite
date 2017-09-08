@@ -22,7 +22,7 @@ import static org.elasticsearch.common.unit.DistanceUnit.KILOMETERS
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery
 import static org.elasticsearch.index.query.QueryBuilders.existsQuery
 import static org.elasticsearch.index.query.QueryBuilders.geoDistanceQuery
-import static org.elasticsearch.index.query.QueryBuilders.hasParentQuery
+import static org.elasticsearch.join.query.JoinQueryBuilders.hasParentQuery
 import static org.elasticsearch.index.query.QueryBuilders.idsQuery
 import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery
@@ -212,7 +212,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
 
         when: 'a geo distance filter search is performed'
 
-        QueryBuilder distanceQuery = geoDistanceQuery('location').distance(50, KILOMETERS).lat(50).lon(13)
+        QueryBuilder distanceQuery = geoDistanceQuery('location').distance(50, KILOMETERS).point(50, 13)
         SearchResponse response = elasticSearchService.search(Building, distanceQuery)
 
         then: 'the building should be found'
@@ -280,7 +280,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         elasticSearchAdminService.refresh(Store, Department, Product)
 
         when:
-        SearchResponse response = elasticSearchService.search(Department, hasParentQuery('store', matchQuery('owner', 'Horst')))
+        SearchResponse response = elasticSearchService.search(Department, hasParentQuery('store', matchQuery('owner', 'Horst'), false))
 
         then:
         response.hits.totalHits
@@ -299,7 +299,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         SearchResponse response = elasticSearchService.prepareSearch(Product)
                 .setFrom(3)
                 .setSize(2)
-                .addSort(fieldSort('name'))
+                .addSort(fieldSort('name.keyword'))
                 .setQuery(wildcardQuery('name', 'produkt*'))
         .get()
 
@@ -322,7 +322,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         elasticSearchAdminService.refresh(Product)
 
         when: 'a search is performed'
-        def sort1 = fieldSort('name').order(SortOrder.ASC)
+        def sort1 = fieldSort('name.keyword').order(SortOrder.ASC)
         def sort2 = fieldSort('price').order(SortOrder.DESC)
         SearchResponse response = elasticSearchService.prepareSearch(Product)
                 .setQuery(wildcardQuery('name', 'yogurt*'))
@@ -338,7 +338,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         esProducts*.price == [1, 0, 1, 0]
 
         when: 'another search is performed'
-        sort1 = new FieldSortBuilder('name').order(SortOrder.DESC)
+        sort1 = new FieldSortBuilder('name.keyword').order(SortOrder.DESC)
         sort2 = new FieldSortBuilder('price').order(SortOrder.ASC)
 
         response = elasticSearchService.prepareSearch(Product)
@@ -372,7 +372,7 @@ class ElasticSearchServiceIntegrationSpec extends Specification {
         when: 'a geo distance search is performed'
         SearchResponse response = elasticSearchService.search(Building, boolQuery()
                 .must(matchQuery('name', 'Postcode'))
-                .filter(geoDistanceQuery('location').distance(distance).lat(48.141).lon(11.57))
+                .filter(geoDistanceQuery('location').distance(distance).point(48.141, 11.57))
         )
 
         then: 'all geo points in the search radius are found'

@@ -40,17 +40,17 @@ class StoreMarshaller implements ElasticSearchMarshaller<Store> {
         store {
             "properties" {
                 "name"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
                 "description"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
                 "owner"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
