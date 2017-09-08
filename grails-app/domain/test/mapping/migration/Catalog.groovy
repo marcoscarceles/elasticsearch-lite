@@ -34,12 +34,12 @@ class CatalogMarshaller implements ElasticSearchMarshaller<Catalog> {
         catalog {
             "properties" {
                 "company"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
                 "issue"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
