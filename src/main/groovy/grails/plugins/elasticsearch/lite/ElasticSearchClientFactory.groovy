@@ -281,10 +281,10 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
         boolean ip6Enabled = esConfig.shield.ip6Enabled ?: false
 
         try {
-            client = new PreBuiltXPackTransportClient(transportSettings);
+            client = new PreBuiltXPackTransportClient(transportSettings.build());
             log.info("Shield Enabled")
         } catch (ClassNotFoundException e) {
-            client = new PreBuiltTransportClient(transportSettings)
+            client = new PreBuiltTransportClient(transportSettings.build())
         }
 
         // Configure transport addresses
