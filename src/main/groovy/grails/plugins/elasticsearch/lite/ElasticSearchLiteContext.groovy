@@ -7,6 +7,7 @@ import grails.plugins.elasticsearch.lite.mapping.ElasticSearchMarshaller
 import grails.plugins.elasticsearch.lite.mapping.Mapping
 import grails.plugins.elasticsearch.lite.mapping.Searchable
 import groovy.transform.CompileStatic
+import org.elasticsearch.action.bulk.BulkProcessor
 import org.elasticsearch.client.Client
 import org.grails.core.artefact.DomainClassArtefactHandler
 
@@ -20,6 +21,7 @@ class ElasticSearchLiteContext {
 
     GrailsApplication grailsApplication
     Client client
+    BulkProcessor bulkProcessor
     boolean autoIndexingEnabled = true
     boolean initialIndexCompleted = false
 
@@ -33,11 +35,14 @@ class ElasticSearchLiteContext {
 
     @PostConstruct
     Map<Class, ElasticSearchMarshaller<?>> init() {
+        List<Class> domainClasses = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)*.clazz
+        init(domainClasses)
+    }
+
+    Map<Class, ElasticSearchMarshaller<?>> init(List<Class> domainClasses) {
         ELASTIC_TYPES = [:]
         MARSHALLERS = [:]
-        for (GrailsClass grailsClazz : grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)) {
-            GrailsDomainClass domainClass = (GrailsDomainClass) grailsClazz
-            Class clazz = domainClass.clazz
+        for (Class clazz : domainClasses) {
             if(clazz.isAnnotationPresent(Mapping)) {
                 Mapping mapping = clazz.getAnnotation(Mapping)
                 MARSHALLERS.put(clazz, mapping.value().newInstance())
