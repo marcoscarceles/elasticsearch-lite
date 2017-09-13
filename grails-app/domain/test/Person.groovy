@@ -43,27 +43,27 @@ class PersonMarshaller implements ElasticSearchMarshaller<Person> {
         person {
             "properties" {
                 "firstName"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
                 "lastName"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
                 "fullName"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
                 "password"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }
                 "nickNames"{
-                    "type" "string"
+                    "type" "text"
                     "term_vector" "with_positions_offsets"
                     "include_in_all"true
                 }

@@ -13,16 +13,16 @@ import test.Person
 @TestFor(ElasticSearchService)
 class ElasticSearchServiceSpec extends Specification {
 
-    ElasticSearchLiteContextSpec elasticSearchLiteContext
+    ElasticSearchLiteContext elasticSearchLiteContext
 
     def setup() {
-        elasticSearchLiteContext = new ElasticSearchLiteContextSpec()
+        elasticSearchLiteContext = new ElasticSearchLiteContext()
         elasticSearchLiteContext.client = Mock(Client)
         service.elasticSearchLiteContext = elasticSearchLiteContext
     }
 
     def "indexes a domain object"() {
         given:
-        elasticSearchLiteContext.init(Person)
+        elasticSearchLiteContext.init([Person])
     }
 }

@@ -14,10 +14,10 @@ import org.elasticsearch.client.transport.TransportClient
 import org.elasticsearch.cluster.health.ClusterHealthStatus
 import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.common.transport.InetSocketTransportAddress
-import org.elasticsearch.index.mapper.MergeMappingException
 import org.elasticsearch.node.Node
-import org.elasticsearch.node.NodeBuilder
 import org.elasticsearch.transport.RemoteTransportException
+import org.elasticsearch.transport.client.PreBuiltTransportClient
+import org.elasticsearch.xpack.client.PreBuiltXPackTransportClient
 import org.springframework.core.io.Resource
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 
@@ -114,9 +114,6 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
                     } catch (IllegalArgumentException e) {
                         log.warn("Could not install mapping ${indexName}/${elasticSearchType.type} due to ${e.getClass()}: ${e.message}, migrations needed")
                         mappingConflicts << elasticSearchType
-                    } catch (MergeMappingException e) {
-                        log.warn("Could not install mapping ${indexName}/${elasticSearchType.type} due to ${e.getClass()}: ${e.message}, migrations needed")
-                        mappingConflicts << elasticSearchType
                     }
                 }
             }
@@ -205,17 +202,18 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
     }
 
     Client buildLocalClient(Settings.Builder settings) {
-        settings.put("node.local", true)
+        settings.put("transport.type", "local")
+        settings.put("http.enabled", false)
 
         //Build node and get client
-        Node node = NodeBuilder.nodeBuilder().settings(settings).node()
+        Node node = new Node(settings.build())
         node.start()
 
         node.client()
     }
 
     Settings.Builder getBaseSettings() {
-        Settings.Builder settings = Settings.settingsBuilder()
+        Settings.Builder settings = Settings.builder()
 
         def configFile = esConfig.bootstrap.config.file
         if (configFile) {
@@ -265,7 +263,7 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
 
         TransportClient client
 
-        def transportSettings = Settings.settingsBuilder()
+        def transportSettings = Settings.builder()
 
         def transportSettingsFile = esConfig.bootstrap.transportSettings.file
         if (transportSettingsFile) {
@@ -283,11 +281,10 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
         boolean ip6Enabled = esConfig.shield.ip6Enabled ?: false
 
         try {
-            Class shieldPluginClass = Class.forName("org.elasticsearch.shield.ShieldPlugin")
-            client = TransportClient.builder().addPlugin(shieldPluginClass).settings(transportSettings).build();
+            client = new PreBuiltXPackTransportClient(transportSettings.build());
             log.info("Shield Enabled")
         } catch (ClassNotFoundException e) {
-            client = TransportClient.builder().settings(transportSettings).build()
+            client = new PreBuiltTransportClient(transportSettings.build())
         }
 
         // Configure transport addresses
@@ -335,6 +332,7 @@ class ElasticSearchClientFactory implements ElasticSearchConfigAware {
             Map<String, Object> indexDefaults = esConfig.get("index") as Map<String, Object>
             log.debug("Retrieved index settings")
             if (indexDefaults != null) {
+                indexDefaults.remove("numberOfReplicas")
                 for (Map.Entry<String, Object> entry : indexDefaults.entrySet()) {
                     indexSettings.put("index." + entry.getKey(), entry.getValue())
                 }

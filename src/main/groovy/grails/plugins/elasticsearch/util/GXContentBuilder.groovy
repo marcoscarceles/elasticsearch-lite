@@ -22,6 +22,7 @@ package grails.plugins.elasticsearch.util
 import org.elasticsearch.common.xcontent.XContentBuilder
 import org.elasticsearch.common.xcontent.XContentFactory
 import org.elasticsearch.common.xcontent.XContentType
+import org.elasticsearch.common.bytes.BytesReference
 
 /**
  * This is a hacked version of EC's GXContentBuilder with patched property delegation.
@@ -59,7 +60,8 @@ class GXContentBuilder extends GroovyObjectSupport {
         XContentBuilder builder = XContentFactory.contentBuilder(contentType)
         def json = build(c)
         builder.map(json)
-        return builder.bytes().toBytes()
+        def bytes = builder.bytes()
+        return BytesReference.toBytes(bytes)
     }
 
     private buildRoot(Closure c) {

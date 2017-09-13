@@ -40,7 +40,7 @@ The plugin still eases the administration of Elasticsearch indices via the `elas
 
 === Versioning
 
-The plugin is still in version 0.1.0-SNAPSHOT, which works with Grails 3.1.x and Elasticsearch 2.4.4. Part of the scope of this new plugin is to simplify versioning and make it easier to upgrade.
+The plugin is in version 0.5.0-SNAPSHOT, which works with Grails 3.1.x and Elasticsearch 5.5.2. Part of the scope of this new plugin is to simplify versioning and make it easier to upgrade.
 
 == License
 
