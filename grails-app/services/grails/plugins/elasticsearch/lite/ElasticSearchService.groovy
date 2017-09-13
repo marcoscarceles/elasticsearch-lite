@@ -275,23 +275,25 @@ class ElasticSearchService implements ElasticSearchConfigAware, InitializingBean
 
     void unindexAll(boolean backgroundTask, DetachedCriteria detachedCriteria = null, List<Class> domainClasses) {
         domainClasses?.findAll { elasticSearchLiteContext.isSearchable(it) }.each { Class domainClass ->
-            DetachedCriteria criteria = detachedCriteria ?: new DetachedCriteria(domainClass)
-            int total = criteria.count()
+            withReadAccess(domainClass) {
+                DetachedCriteria criteria = detachedCriteria ?: new DetachedCriteria(domainClass)
+                int total = criteria.count()
 
-            log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
+                log.debug("Begin bulk index of domain class ${domainClass} with ${total} instances")
 
-            0.step(total, bulkBatchSize) { offset ->
-                log.info("Indexing ${offset} to ${offset+bulkBatchSize}")
-                List instances = criteria.list(offset:offset, max:bulkBatchSize) {
-                    order("id", "desc")
+                0.step(total, bulkBatchSize) { offset ->
+                    log.info("Unindexing ${offset} to ${offset + bulkBatchSize}")
+                    List instances = criteria.list(offset: offset, max: bulkBatchSize) {
+                        order("id", "desc")
+                    }
+                    unindex(instances)
+
+                    if (!backgroundTask || !bulkProcessor) { //Otherwise let the BulkProcessor take care of the batching
+                        sleep(bulkInterval)
+                    }
                 }
-                unindex(instances)
-
-                if(!backgroundTask || !bulkProcessor) { //Otherwise let the BulkProcessor take care of the batching
-                    sleep(bulkInterval)
-                }
+                log.debug("Bulk index of domain class ${domainClass} with ${total} completed")
             }
-            log.debug("Bulk index of domain class ${domainClass} with ${total} completed")
         }
     }
 
